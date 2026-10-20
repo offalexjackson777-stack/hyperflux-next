@@ -193,14 +193,14 @@ class RpmPlanTests(unittest.TestCase):
                 dict(driver.scripts)["preun"],
             )
             post = dict(dkms.scripts)["post"]
-            self.assertIn("dkms add -m hid-hyperflux-next -v 2.1.2 --rpm_safe_upgrade", post)
+            self.assertIn("dkms add -m hid-hyperflux-next -v 2.2.0 --rpm_safe_upgrade", post)
             # The upgrade lock directory exists before `dkms add` takes the lock.
             self.assertLess(
                 post.index("systemd-tmpfiles --create dkms.conf"), post.index("dkms add")
             )
-            self.assertIn('dkms build -m hid-hyperflux-next -v 2.1.2 -k "$kernel"', post)
+            self.assertIn('dkms build -m hid-hyperflux-next -v 2.2.0 -k "$kernel"', post)
             self.assertIn(
-                "dkms remove -m hid-hyperflux-next -v 2.1.2 --all --rpm_safe_upgrade",
+                "dkms remove -m hid-hyperflux-next -v 2.2.0 --all --rpm_safe_upgrade",
                 dict(dkms.scripts)["preun"],
             )
             core_post = dict(core.scripts)["post"]
@@ -267,6 +267,11 @@ class RpmPlanTests(unittest.TestCase):
             "%attr(0644,root,root) %config(noreplace) /etc/hyperflux-next/bridge.json\n", text
         )
         self.assertIn("%license /usr/share/licenses/hyperflux-next-linux/LICENSE\n", text)
+        # Full on Fedora has no OpenRGB plugin, so nothing declares the icons' ISC.
+        without_plugin = "GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND MIT"
+        self.assertEqual(plans[-1].license, without_plugin)
+        self.assertIn(f"\nLicense: {without_plugin}\nURL: ", text)
+        self.assertNotIn("ISC", text)
         self.assertIn("%dir %attr(2751,root,root) /etc/hyperflux-next\n", text)
         # Shell parameter expansion survives rpmbuild's macro pass.
         self.assertIn("kernel=${build%%/build}", text)

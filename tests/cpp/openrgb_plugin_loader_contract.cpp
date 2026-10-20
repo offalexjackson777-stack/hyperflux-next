@@ -97,8 +97,9 @@ int main(int argc, char** argv)
         return failure(__LINE__, loader.errorString());
     }
     const auto info = plugin->GetPluginInfo();
-    if(info.Name != "HyperFlux Next" || info.Version != "2.1.2"
-       || info.Commit.empty() || !info.URL.empty()
+    if(info.Name != "HyperFlux Next" || info.Version != "2.2.0"
+       || info.Commit.empty()
+       || info.URL != "https://github.com/offalexjackson777-stack/hyperflux-next"
        || info.Location != OPENRGB_PLUGIN_LOCATION_INFORMATION
        || info.Label != "HyperFlux Next" || info.ProtocolVersion != 0)
     {

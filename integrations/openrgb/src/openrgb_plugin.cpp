@@ -56,7 +56,7 @@ public:
             "Native OpenRGB presentation for devices paired through HyperFlux";
         info.Version = std::string(build_config::component_version);
         info.Commit = std::string(build_config::source_revision);
-        info.URL = "";
+        info.URL = std::string(repository_url);
         info.Location = OPENRGB_PLUGIN_LOCATION_INFORMATION;
         info.Label = "HyperFlux Next";
         info.TabIconString = "";
@@ -88,12 +88,14 @@ public:
 #if HFX_OPENRGB_NATIVE_ROUTE_ENABLED
             return make_plugin_information_view_model(
                 application_.status(),
-                application_.controllers());
+                application_.controllers(),
+                monotonic_now_ms());
 #else
             return make_plugin_information_view_model(
                 application_.status(),
                 application_.inventory(),
-                application_.controllers());
+                application_.controllers(),
+                monotonic_now_ms());
 #endif
         });
         connect(

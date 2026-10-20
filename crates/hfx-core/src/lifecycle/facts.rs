@@ -6,8 +6,8 @@
 //! lease, session, transport, or write-authority type.
 
 use hfx_domain::{
-    ActivityState, BatteryPercent, ConnectionMode, ContactState, DeviceKind, EndpointId,
-    EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
+    ActivityState, BatteryCharge, BatteryPercent, ConnectionMode, ContactState, DeviceKind,
+    EndpointId, EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
     MonotonicMs, PairingState, PowerState, PresenceState, ProductId, ReceiverLifecycleState,
     RouteKind, RouteState, SequenceNumber, SleepState,
 };
@@ -271,6 +271,9 @@ pub enum BatteryValue {
 pub struct BatteryLifecycle {
     pub(super) value: LifecycleFact<BatteryValue>,
     pub(super) freshness: LifecycleFact<FreshnessState>,
+    /// Charge state annotating the current reported value. It exists only
+    /// beside a reported value and is cleared when that value is gone.
+    pub(super) charge: LifecycleFact<Option<BatteryCharge>>,
 }
 
 impl BatteryLifecycle {
@@ -278,6 +281,7 @@ impl BatteryLifecycle {
         Self {
             value: LifecycleFact::unknown(BatteryValue::Unknown),
             freshness: LifecycleFact::unknown(FreshnessState::Unknown),
+            charge: LifecycleFact::unknown(None),
         }
     }
 
@@ -291,9 +295,17 @@ impl BatteryLifecycle {
         &self.freshness
     }
 
+    #[must_use]
+    pub const fn charge(&self) -> &LifecycleFact<Option<BatteryCharge>> {
+        &self.charge
+    }
+
     pub(super) fn apply_value(&mut self, value: BatteryValue, stamp: ObservationStamp) -> bool {
         if !self.value.accepts(&stamp) || !self.freshness.accepts(&stamp) {
             return false;
+        }
+        if !matches!(value, BatteryValue::Reported(_)) {
+            self.charge.value = None;
         }
         let value_applied = self.value.apply(value, stamp.clone());
         let freshness_applied = self.freshness.apply(FreshnessState::Fresh, stamp);
@@ -305,7 +317,21 @@ impl BatteryLifecycle {
         if !self.value.is_observed() || !self.freshness.accepts(&stamp) {
             return false;
         }
+        self.charge.value = None;
         self.freshness.apply(FreshnessState::Stale, stamp)
+    }
+
+    /// Records the charge state reported with the current value. Without a
+    /// reported value there is nothing for the charge state to annotate.
+    pub(super) fn apply_charge(
+        &mut self,
+        charge: Option<BatteryCharge>,
+        stamp: ObservationStamp,
+    ) -> bool {
+        if !matches!(self.value.value(), BatteryValue::Reported(_)) {
+            return false;
+        }
+        self.charge.apply(charge, stamp)
     }
 }
 

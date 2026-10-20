@@ -6,9 +6,9 @@ use hfx_core::{
     ObservationStamp, ReceiverLifecycleMachine, ReceiverLifecycleRegistry, ReceiverTransport,
 };
 use hfx_domain::{
-    ActivityState, ApplyOutcome, BatteryPercent, ContactState, EndpointId, EventKind,
-    FreshnessState, GenerationId, LogicalDeviceId, PairingState, PowerState, PresenceState,
-    ReceiverId, ReceiverLifecycleState, RouteState, SleepState,
+    ActivityState, ApplyOutcome, BatteryCharge, BatteryPercent, ContactState, EndpointId,
+    EventKind, FreshnessState, GenerationId, LogicalDeviceId, PairingState, PowerState,
+    PresenceState, ReceiverId, ReceiverLifecycleState, RouteState, SleepState,
 };
 use std::fmt;
 
@@ -34,6 +34,12 @@ pub enum LifecycleObservationKind {
     },
     BatteryStale {
         device_id: LogicalDeviceId,
+    },
+    /// The charge state reported with the current battery value; `None`
+    /// clears it when the report reads as unknown.
+    BatteryCharge {
+        device_id: LogicalDeviceId,
+        charge: Option<BatteryCharge>,
     },
     Route {
         device_id: LogicalDeviceId,
@@ -77,6 +83,7 @@ impl LifecycleObservationKind {
             | Self::BatteryReported { device_id, .. }
             | Self::BatteryUnavailable { device_id }
             | Self::BatteryStale { device_id }
+            | Self::BatteryCharge { device_id, .. }
             | Self::Route { device_id, .. }
             | Self::Power { device_id, .. }
             | Self::Sleep { device_id, .. }
@@ -92,6 +99,7 @@ impl LifecycleObservationKind {
             Self::BatteryReported { .. }
                 | Self::BatteryUnavailable { .. }
                 | Self::BatteryStale { .. }
+                | Self::BatteryCharge { .. }
         )
     }
 }
@@ -392,6 +400,9 @@ fn apply_kind(
         }
         LifecycleObservationKind::BatteryStale { device_id } => {
             Ok(machine.mark_battery_stale(&device_id, stamp))
+        }
+        LifecycleObservationKind::BatteryCharge { device_id, charge } => {
+            Ok(machine.observe_battery_charge(&device_id, charge, stamp))
         }
         LifecycleObservationKind::Route {
             device_id,

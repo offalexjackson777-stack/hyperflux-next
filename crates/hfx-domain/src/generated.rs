@@ -5458,6 +5458,42 @@ impl fmt::Display for TelemetryAvailability {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum BatteryCharge {
+    #[serde(rename = "charging")]
+    Charging,
+    #[serde(rename = "discharging")]
+    Discharging,
+}
+
+impl BatteryCharge {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Charging => "charging",
+            Self::Discharging => "discharging",
+        }
+    }
+}
+
+impl FromStr for BatteryCharge {
+    type Err = DomainValueError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "charging" => Ok(Self::Charging),
+            "discharging" => Ok(Self::Discharging),
+            _ => Err(DomainValueError::unknown_wire("BatteryCharge")),
+        }
+    }
+}
+
+impl fmt::Display for BatteryCharge {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum LeaseOutcome {
     #[serde(rename = "granted")]
     Granted,

@@ -29,7 +29,7 @@ The Rust SDK currently owns:
 - typed clean-EOF, framing, server, and attribution failures;
 - ergonomic snapshot, diagnostics, ownership, event, and transaction methods.
 
-Protocol v7 additionally gives native integrations typed methods for:
+Protocol versions 7 and 8 additionally give native integrations typed methods for:
 
 - enumerating qualified routes with exact wireless identity and opaque tokens;
 - watching bounded generation-scoped availability transitions;
@@ -42,17 +42,19 @@ commands, effects, persistence, ownership policy, queueing, receiver carrier
 encoding, or kernel transport. It exposes the native tunnel contract while the
 bridge and kernel enforce that contract.
 
-Protocol version 4 adds exact receiver and child profile identities and digests
-to snapshots. This lets an integration construct a profile-bound transaction
-from bridge authority instead of assuming a receiver model from its local
-catalog. Versions 1 through 3 remain frozen; their snapshots normalize without
-invented profile digests, so integrations that require writable controllers
-negotiate the `snapshot-profile-bindings` feature. Versions 1 through 4 and 6
-are deprecated in 2.1 and will be removed in 2.2; integrations should negotiate
-version 5 or 7, and version 7 carries everything version 6 added.
+The bridge serves protocol versions 5, 7 and 8. All three carry exact receiver and
+child profile identities and digests in snapshots. This lets an integration
+construct a profile-bound transaction from bridge authority instead of assuming
+a receiver model from its local catalog. Versions 1 through 4 and 6 were retired
+in 2.2; a client that offers only those versions receives the catalogued
+incompatible-version error with the `update-protocol-peer` remediation.
 
-Protocol version 7 preserves every version-6 semantic migration method and adds
-the `native-receiver-tunnel` feature independently. Native applications submit
+Protocol version 7 preserves every version-5 semantic migration method, adds
+the return-lifecycle projection, and adds the `native-receiver-tunnel` feature
+independently. Protocol version 8 keeps every version-7 method and adds an
+optional `charge` (`charging` or `discharging`) to each fresh battery
+observation; clients on versions 5 and 7 receive the same snapshot without it.
+Native applications submit
 only a fixed report already constructed by their upstream Razer implementation;
 they cannot specify USB control setup fields, receiver carrier frames, or an
 unqualified destination.

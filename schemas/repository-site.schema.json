@@ -5,7 +5,7 @@
   "description": "The one GitHub Pages site that carries the Arch, Ubuntu, Debian, Fedora, and openSUSE package repositories. The guides point new installs at it only once state is published.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "state", "site_url", "publication_branch", "repository_id", "label", "public_key_asset", "apt_component"],
+  "required": ["$schema", "schema", "state", "site_url", "publication_branch", "repository_id", "label", "public_key_asset", "apt_component", "publication_author"],
   "properties": {
     "$schema": {"const": "../schemas/repository-site.schema.json"},
     "schema": {"const": "hyperflux-repository-site-v1"},
@@ -15,6 +15,16 @@
     "repository_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$"},
     "label": {"type": "string", "minLength": 1, "maxLength": 64},
     "public_key_asset": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{1,95}\\.asc$"},
-    "apt_component": {"const": "main"}
+    "apt_component": {"const": "main"},
+    "publication_author": {
+      "description": "The name and GitHub noreply address that author the one gh-pages commit, so publishing never depends on the machine's git identity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "email"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"},
+        "email": {"type": "string", "pattern": "^(?:[0-9]+\\+)?[A-Za-z0-9][A-Za-z0-9-]{0,38}@users\\.noreply\\.github\\.com$"}
+      }
+    }
   }
 }

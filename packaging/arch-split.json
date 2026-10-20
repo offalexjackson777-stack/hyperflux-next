@@ -43,7 +43,8 @@
       "edition": "linux",
       "description": "HyperFlux receiver driver, bridge, SDK, CLI, and base services",
       "licenses": [
-        "GPL-2.0-only"
+        "GPL-2.0-only",
+        "MIT"
       ],
       "builds": [
         "bridge-daemon",
@@ -59,7 +60,8 @@
         "device-permissions",
         "default-configuration",
         "operator-troubleshooting",
-        "core-license"
+        "core-license",
+        "core-rust-crates-license"
       ],
       "dependency_roles": [
         "c-runtime",
@@ -119,7 +121,9 @@
       "licenses": [
         "GPL-2.0-only",
         "GPL-2.0-or-later",
-        "GPL-3.0-only"
+        "GPL-3.0-only",
+        "ISC",
+        "MIT"
       ],
       "builds": [
         "openrazer-native-relay",
@@ -132,7 +136,10 @@
         "openrazer-native-key-event-links",
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
-        "openrgb-license"
+        "openrgb-license",
+        "lucide-license",
+        "full-rust-crates-license",
+        "nlohmann-json-license"
       ],
       "dependency_roles": [
         "c-runtime",
@@ -164,7 +171,7 @@
       "output": "full",
       "relation": "hyperflux-next-openrgb=0.0.0_dev.1-2",
       "reason": "The pre-2.0 connector package owned the OpenRGB plugin path that Full now owns; the exact-version conflict and replace migrate hosts that still carry that one retired build.",
-      "expires_before_release": "2.2.0-1"
+      "expires_before_release": "2.3.0-1"
     }
   ]
 }

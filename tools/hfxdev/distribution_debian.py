@@ -84,7 +84,55 @@ DEBIAN_OPERATORS = {"=": "=", ">=": ">=", "<=": "<=", "<": "<<", ">": ">>"}
 GLIBC_SYMBOL = re.compile(r"\((?P<version>GLIBC_[A-Za-z0-9_.]+)\)|\s(?P<bare>GLIBC_[A-Za-z0-9_.]+)\s")
 # DEP-5 license paragraphs for the licenses the catalog admits. Debian ships
 # the full texts in /usr/share/common-licenses, so the paragraphs point there.
-DEP5_LICENSES = {"GPL-2.0-only": "GPL-2", "GPL-2.0-or-later": "GPL-2+", "GPL-3.0-only": "GPL-3"}
+DEP5_LICENSES = {
+    "GPL-2.0-only": "GPL-2",
+    "GPL-2.0-or-later": "GPL-2+",
+    "GPL-3.0-only": "GPL-3",
+    "ISC": "ISC",
+    "MIT": "Expat",
+}
+# Licenses that cover only bundled third-party files, not the package as a
+# whole. Each entry names the license, the outputs that bundle those files, the
+# files, their own copyright, an optional comment, the project files in the
+# same directory that stay under the package licenses (None when there are
+# none), and whether only the OpenRGB plugin bundles them.
+# Rust crates are fetched by Cargo, and the build maps their location to
+# `.cargo`, which is how they appear in the programs.
+THIRD_PARTY_FILES = (
+    (
+        "ISC",
+        ("full",),
+        "integrations/openrgb/icons/*",
+        "2013-2022 Cole Bemis (portions, as part of Feather), 2022 Lucide Contributors",
+        None,
+        "integrations/openrgb/icons/hyperflux-*",
+        True,
+    ),
+    (
+        "MIT",
+        ("core", "full"),
+        ".cargo/registry/src/*",
+        "The authors of each crate",
+        "Rust crates from crates.io compiled into the programs. Each crate's own\n"
+        "notice is in LICENSE-rust-crates beside this package's other licenses.",
+        None,
+        False,
+    ),
+    (
+        "MIT",
+        ("full",),
+        "sdk/cpp/vendor/include/*",
+        "2013-2023 Niels Lohmann",
+        "nlohmann/json, compiled into the OpenRGB plugin.",
+        None,
+        True,
+    ),
+)
+# Licenses that only code bundled in the OpenRGB plugin uses. A Full output
+# without the plugin does not declare them. MIT stays: the Rust crates in its
+# other programs use it too.
+OPENRGB_PLUGIN_LICENSES = ("ISC",)
+THIRD_PARTY_LICENSES = frozenset(entry[0] for entry in THIRD_PARTY_FILES)
 LICENSE_PARAGRAPHS = {
     "GPL-2.0-only": (
         "This package is free software; you can redistribute it and/or modify",
@@ -111,6 +159,40 @@ LICENSE_PARAGRAPHS = {
         "On Debian systems, the complete text of the GNU General Public License",
         'version 3 can be found in "/usr/share/common-licenses/GPL-3".',
     ),
+    # Debian has no common-licenses copy of ISC, so the full text goes here.
+    "ISC": (
+        "Permission to use, copy, modify, and/or distribute this software for any",
+        "purpose with or without fee is hereby granted, provided that the above",
+        "copyright notice and this permission notice appear in all copies.",
+        ".",
+        'THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES',
+        "WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF",
+        "MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR",
+        "ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES",
+        "WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN",
+        "ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF",
+        "OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.",
+    ),
+    # Debian has no common-licenses copy of the MIT (Expat) license either.
+    "MIT": (
+        "Permission is hereby granted, free of charge, to any person obtaining a",
+        'copy of this software and associated documentation files (the "Software"),',
+        "to deal in the Software without restriction, including without limitation",
+        "the rights to use, copy, modify, merge, publish, distribute, sublicense,",
+        "and/or sell copies of the Software, and to permit persons to whom the",
+        "Software is furnished to do so, subject to the following conditions:",
+        ".",
+        "The above copyright notice and this permission notice shall be included",
+        "in all copies or substantial portions of the Software.",
+        ".",
+        'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS',
+        "OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF",
+        "MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.",
+        "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY",
+        "CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,",
+        "TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE",
+        "SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+    ),
 }
 
 
@@ -127,6 +209,7 @@ class DebianPlan:
     synopsis: str
     extended_description: tuple[str, ...]
     licenses: tuple[str, ...]
+    openrgb_plugin: bool
     depends: tuple[str, ...]
     suggests: tuple[str, ...]
     conflicts: tuple[str, ...]
@@ -269,6 +352,22 @@ def plugin_dependencies(output: SplitOutput, target: DistributionTarget) -> tupl
     if not target.openrgb_plugin or OPENRGB_PLUGIN_BUILD not in output.builds:
         return ()
     return OPENRGB_PLUGIN_RELEASE_DEPENDENCIES[target.id]
+
+
+def carries_openrgb_plugin(output: SplitOutput, target: DistributionTarget) -> bool:
+    return target.openrgb_plugin and OPENRGB_PLUGIN_BUILD in output.builds
+
+
+def output_licenses(output: SplitOutput, target: DistributionTarget) -> tuple[str, ...]:
+    """The licenses of what the output carries on the target.
+
+    A Full output without the OpenRGB plugin drops the licenses that only the
+    plugin's bundled code uses.
+    """
+
+    if OPENRGB_PLUGIN_BUILD not in output.builds or target.openrgb_plugin:
+        return output.licenses
+    return tuple(item for item in output.licenses if item not in OPENRGB_PLUGIN_LICENSES)
 
 
 def output_relations(
@@ -443,7 +542,8 @@ def debian_plans(
                 homepage=catalog.homepage,
                 synopsis=summary,
                 extended_description=description,
-                licenses=output.licenses,
+                licenses=output_licenses(output, target),
+                openrgb_plugin=carries_openrgb_plugin(output, target),
                 depends=tuple(
                     dict.fromkeys(
                         [*role_packages, *plugin_dependencies(output, target), *siblings]
@@ -547,6 +647,7 @@ def _dep5(plan: DebianPlan, license_id: str) -> str:
 
 
 def copyright_text(plan: DebianPlan) -> str:
+    own = " and ".join(_dep5(plan, item) for item in plan.licenses if item not in THIRD_PARTY_LICENSES)
     lines = [
         "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/",
         "Upstream-Name: hyperflux-next",
@@ -554,8 +655,26 @@ def copyright_text(plan: DebianPlan) -> str:
         "",
         "Files: *",
         f"Copyright: {COPYRIGHT_HOLDER}",
-        f"License: {' and '.join(_dep5(plan, item) for item in plan.licenses)}",
+        f"License: {own}",
     ]
+    # Later paragraphs win in DEP-5, so each third-party directory is followed
+    # by the project files that live beside it.
+    declared = set()
+    for license_id, outputs, files, holder, comment, ours, plugin in THIRD_PARTY_FILES:
+        if plan.output not in outputs or (plugin and not plan.openrgb_plugin):
+            continue
+        if license_id not in plan.licenses:
+            raise ModelError(f"{plan.package_name}: bundles {files} but does not declare {license_id}")
+        declared.add(license_id)
+        lines.extend(["", f"Files: {files}", f"Copyright: {holder}", f"License: {_dep5(plan, license_id)}"])
+        if comment is not None:
+            first, *rest = comment.split("\n")
+            lines.extend([f"Comment: {first}", *(f" {line}" for line in rest)])
+        if ours is not None:
+            lines.extend(["", f"Files: {ours}", f"Copyright: {COPYRIGHT_HOLDER}", f"License: {own}"])
+    undeclared = THIRD_PARTY_LICENSES.intersection(plan.licenses) - declared
+    if undeclared:
+        raise ModelError(f"{plan.package_name}: no bundled files for {', '.join(sorted(undeclared))}")
     for license_id in plan.licenses:
         paragraph = LICENSE_PARAGRAPHS[license_id]
         lines.extend(["", f"License: {_dep5(plan, license_id)}", *(f" {line}" for line in paragraph)])

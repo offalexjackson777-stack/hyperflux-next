@@ -43,6 +43,7 @@ from .distribution_debian import (
     check_edition_contract,
     dkms_module,
     edition_outputs,
+    output_licenses,
     output_relations,
     output_text,
     owns_system_users,
@@ -436,7 +437,7 @@ def rpm_plans(
                 architecture="noarch" if not output.compiled else architecture,
                 summary=summary,
                 description=description,
-                licenses=output.licenses,
+                licenses=output_licenses(output, target),
                 depends=tuple(dict.fromkeys([*role_packages, *siblings])),
                 scriptlet_requires=_scriptlet_requires(output, target, scripts),
                 suggests=tuple(
@@ -505,6 +506,14 @@ def _file_flag(plan: RpmPlan, path: str) -> str:
     return ""
 
 
+def _source_licenses(split: ArchSplit, plans: tuple[RpmPlan, ...]) -> tuple[str, ...]:
+    """The split licenses that at least one subpackage on this target declares."""
+
+    return tuple(
+        item for item in split.licenses if any(item in plan.licenses for plan in plans)
+    )
+
+
 def spec_text(
     split: ArchSplit,
     plans: tuple[RpmPlan, ...],
@@ -525,7 +534,7 @@ def spec_text(
             f"Version: {first.version}",
             f"Release: {first.release}",
             f"Summary: {_spec_text(split.description, 'summary')}",
-            f"License: {' AND '.join(split.licenses)}",
+            f"License: {' AND '.join(_source_licenses(split, plans))}",
             f"URL: {_spec_text(split.homepage, 'homepage')}",
             f"Packager: {RPM_PACKAGER}",
             "AutoReqProv: no",

@@ -723,10 +723,11 @@ template<>
 template<>
 [[nodiscard]] inline ::hyperflux::BatteryObservation decode<::hyperflux::BatteryObservation>(const Json& value)
 {
-    require_object(value, {"availability", "percentage", "freshness", "confidence", "observed_at_ms"});
+    require_object(value, {"availability", "percentage", "charge", "freshness", "confidence", "observed_at_ms"});
     return ::hyperflux::BatteryObservation {
         decode<::hyperflux::TelemetryAvailability>(required_field(value, "availability")),
         decode_optional_field<::hyperflux::BatteryPercent>(value, "percentage"),
+        decode_optional_field<::hyperflux::BatteryCharge>(value, "charge"),
         decode<::hyperflux::FreshnessState>(required_field(value, "freshness")),
         decode<::hyperflux::EvidenceConfidence>(required_field(value, "confidence")),
         decode_optional_field<::hyperflux::MonotonicMs>(value, "observed_at_ms"),
@@ -739,6 +740,7 @@ template<>
     Json result = Json::object();
     result["availability"] = encode(value.availability);
     result["percentage"] = value.percentage.has_value() ? encode(*value.percentage) : Json(nullptr);
+    result["charge"] = value.charge.has_value() ? encode(*value.charge) : Json(nullptr);
     result["freshness"] = encode(value.freshness);
     result["confidence"] = encode(value.confidence);
     result["observed_at_ms"] = value.observed_at_ms.has_value() ? encode(*value.observed_at_ms) : Json(nullptr);

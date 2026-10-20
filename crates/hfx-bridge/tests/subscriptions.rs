@@ -20,7 +20,7 @@ where
 fn session(client: &str, session: &str) -> AuthorizedSession {
     AuthorizedSession {
         client_id: text::<ClientId>(client),
-        selected_version: ProtocolVersion::try_from(2_u16).expect("version is canonical"),
+        selected_version: ProtocolVersion::try_from(5_u16).expect("version is canonical"),
         session_id: text::<SessionId>(session),
         authorization_epoch: AuthorizationEpoch::try_from(1_u64)
             .expect("authorization epoch is canonical"),

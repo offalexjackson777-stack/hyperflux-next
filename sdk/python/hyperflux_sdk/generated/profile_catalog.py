@@ -4,7 +4,7 @@
 from types import MappingProxyType
 from typing import Final
 
-PROFILE_SOURCE_SHA256: Final = '2e50cd2c408215947570935e520cab1a617d9b7421ba5adfc49456a67d1f6e68'
+PROFILE_SOURCE_SHA256: Final = '097a94bf2cf4cf3bfb60cc98d34af3d88a04111fc4dd34a311c3f3860956b974'
 PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                  'id': 'razer-basilisk-v3-pro',
                  'official_name': 'Razer Basilisk V3 Pro',
@@ -853,7 +853,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                                    'claim.presentation.openrgb-1.1-model-layouts'],
                'identity': {'authority': 'paired-product-id',
                             'manufacturer': 'Razer',
-                            'model_name': 'Razer DeathStalker V2 Pro Tenkeyless',
+                            'model_name': 'Razer DeathStalker V2 Pro TKL',
                             'product_id': 662,
                             'vendor_id': 5426},
                'kind': 'child',
@@ -1113,7 +1113,7 @@ PROFILE_CATALOG: Final = {'candidates': [{'device_kind': 'mouse',
                'schema': 'hyperflux-hardware-profile-v1',
                'source_path': 'profiles/surfaces/razer-hyperflux-v2-hard-edition.json'}],
  'schema': 'hyperflux-compiled-profile-catalog-v1',
- 'source_sha256': '2e50cd2c408215947570935e520cab1a617d9b7421ba5adfc49456a67d1f6e68'}
+ 'source_sha256': '097a94bf2cf4cf3bfb60cc98d34af3d88a04111fc4dd34a311c3f3860956b974'}
 PROFILES_BY_ID: Final = MappingProxyType({profile['profile_id']: profile for profile in PROFILE_CATALOG['profiles']})
 
 __all__ = ["PROFILE_CATALOG", "PROFILE_SOURCE_SHA256", "PROFILES_BY_ID"]

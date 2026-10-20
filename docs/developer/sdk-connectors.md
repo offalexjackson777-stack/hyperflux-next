@@ -58,29 +58,36 @@ configuration into HyperFlux Core.
 
 ## Compatibility
 
-Protocol versions 1 through 7 remain immutable compatibility contracts. Connectors request
-only the features they need and fail locally when the selected version cannot represent an
-operation. New protocol versions use generated types and conformance fixtures; they do not
-revise old wire definitions.
+The bridge serves protocol versions 5 and 7, and both remain immutable compatibility
+contracts. Connectors request only the features they need and fail locally when the selected
+version cannot represent an operation. New protocol versions use generated types and
+conformance fixtures; they do not revise old wire definitions.
 
-### Deprecated protocol versions
+### Retired protocol versions (2.2)
 
-Protocol versions 1, 2, 3, 4 and 6 are deprecated in 2.1 and will be removed in 2.2. What
-this means for a connector:
+Release 2.2 retires protocol versions 1, 2, 3, 4 and 6. What this means for a connector:
 
-- In 2.1 the bridge still serves every version from 1 to 7, so nothing breaks yet.
-- From 2.2 the bridge serves only versions 5 and 7. A client that offers only versions 1 to
-  4, or only version 6, will be refused with the `HFX-PROTOCOL-001` incompatible-version
-  error.
-- Negotiate version 5 or 7. Everything version 6 added (the return-lifecycle projection) is
-  also in version 7. Integrations pinned to version 4 or earlier must move to version 5 or
-  later.
-- The bundled Python, C++ and Rust SDK clients already use only versions 5 (lighting) and 7
-  (native tunnel), so the bundled OpenRGB integration is not affected.
-- Code that vendored the SDK source and includes the `protocol_v1` to `protocol_v4` or
-  `protocol_v6` generated headers or Python modules directly should switch to the
-  `protocol_v5` or `protocol_v7` ones; the deprecated files will no longer be generated in
-  2.2.
+- The bridge negotiates only versions 5, 7 and 8. The bundled SDK clients use 5 (lighting)
+  and 8 (native tunnel with charging state), so the bundled OpenRGB integration is
+  unaffected. Version 7 stays served for clients built against earlier releases.
+- A client that offers only versions 1 to 4, or only version 6, receives a structured
+  `HFX-PROTOCOL-001` incompatible-version error with the `update-protocol-peer`
+  remediation. The connection stays open, so the client can send a new hello with a served
+  version.
+- The error message ends with the exact list of served versions, for example
+  `Supported protocol versions: 5, 7, 8.` Read that list, not a range: version 6 lies
+  between 5 and 7 but is not served. The error catalog also defines an optional
+  `server_supported_versions` detail (`5,7,8`) next to the existing minimum and maximum
+  fields, which keep their meaning (the lowest and highest served version).
+- Everything version 6 added (the return-lifecycle projection) is available in versions 7
+  and 8.
+- Integrations pinned to version 4 or earlier must move to version 5 or later.
+- Code that vendored the SDK source and includes `protocol_v1` to `protocol_v4` or
+  `protocol_v6` generated headers or Python modules directly must switch to the
+  `protocol_v5`, `protocol_v7` or `protocol_v8` ones; the retired files are no longer generated.
+- Limitation: the frozen version 5, 7 and 8 error envelope has no detail fields, so the bridge
+  cannot send the served list as structured data without a new protocol version. The list
+  arrives only inside the message text. Do not parse that text; offer 5 or 8.
 
 An uncertain write result is never replayed automatically. A connector first queries the
 original transaction identity, or closes and reconnects as the SDK recovery contract

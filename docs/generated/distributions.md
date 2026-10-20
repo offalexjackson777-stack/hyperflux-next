@@ -4,16 +4,16 @@
 
 This page lists the HyperFlux packages, what each one depends on, and what each one replaces, for packagers and anyone choosing between Core and Full.
 
-Source digest: `e4577091fbbc71f969a66d1d1b2deb93635342b23ab262492fc6b69bc11f6668`.
+Source digest: `4bbb63cd6ac5a61a6822a4f221c29086c5422e4b1c2f2b0ee3969482290f92fa`.
 
 From `2.1.0-1` the Arch `pkgbase=hyperflux-next` builds 4 packages that never install the same file. Core installs `hyperflux-next-dkms` and `hyperflux-next-linux`. Full installs `hyperflux-next-dkms`, `hyperflux-next-linux`, `hyperflux-next-openrazer-driver-dkms` and `hyperflux-next-full`. Packages for other distributions are tested separately.
 
 | Package | Edition | Required packages | Optional packages | Conflicts | Provides | Replaces |
 | --- | --- | --- | --- | --- | --- | --- |
 | `hyperflux-next-dkms` | Core | `dkms` | none | `hyperflux-v2-linux-dkms` | none | none |
-| `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | none | none | none |
-| `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.1.2-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
-| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.1.2-1`, `hyperflux-next-openrazer-driver-dkms=2.1.2-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
+| `hyperflux-next-linux` | Core | `glibc`, `libgcc`, `systemd`, `hyperflux-next-dkms=2.2.0-1` | none | none | none | none |
+| `hyperflux-next-openrazer-driver-dkms` | Full | `dkms`, `systemd`, `hyperflux-next-dkms=2.2.0-1` | none | `openrazer-driver-dkms` | `openrazer-driver-dkms=3.12.4`, `hyperflux-openrazer-driver-abi=3.12.4` | none |
+| `hyperflux-next-full` | Full | `glibc`, `libgcc`, `systemd`, `hyperflux-next-linux=2.2.0-1`, `hyperflux-next-openrazer-driver-dkms=2.2.0-1`, `qt6-base`, `hidapi`, `libstdc++` | `openrgb` (Stock OpenRGB host for the HyperFlux plugin; OpenRGB 1.0 and 1.1/plugin API 5 verified), `openrazer-daemon` (Stock OpenRazer service for compatible application access), `python-openrazer` (Official Python OpenRazer client API), `polychromatic` (Stock graphical OpenRazer frontend) | `hyperflux-next-openrgb=0.0.0_dev.1-2` | none | `hyperflux-next-openrgb=0.0.0_dev.1-2` |
 
 ## What Each Package Owns
 
@@ -42,10 +42,10 @@ HyperFlux publishes `.deb` packages for Ubuntu 26.10 (`stonking`) in its signed 
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.2-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.2-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.2-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.2-1)` |
-| `hyperflux-next-full` | `2.1.2-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.1.2-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.2-1)` |
+| `hyperflux-next-dkms` | `2.2.0-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.2.0-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.2.0-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.2.0-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.2.0-1)` |
+| `hyperflux-next-full` | `2.2.0-1` | `amd64` | `libc6 (>= 2.34)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-linux (= 2.2.0-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.2.0-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -130,10 +130,10 @@ HyperFlux publishes `.deb` packages for Debian 14 (`forky`) in its signed packag
 
 | Package | Version | Architecture | Depends |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.2-1` | `all` | `dkms` |
-| `hyperflux-next-linux` | `2.1.2-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.1.2-1)` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.1.2-1)` |
-| `hyperflux-next-full` | `2.1.2-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `libqt5core5t64`, `libqt5gui5t64`, `libqt5widgets5t64`, `libhidapi-hidraw0`, `libstdc++6`, `hyperflux-next-linux (= 2.1.2-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.1.2-1)` |
+| `hyperflux-next-dkms` | `2.2.0-1` | `all` | `dkms` |
+| `hyperflux-next-linux` | `2.2.0-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `hyperflux-next-dkms (= 2.2.0-1)` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.2.0-1` | `all` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms (= 2.2.0-1)` |
+| `hyperflux-next-full` | `2.2.0-1` | `amd64` | `libc6 (>= 2.43)`, `libgcc-s1`, `systemd`, `udev`, `libqt5core5t64`, `libqt5gui5t64`, `libqt5widgets5t64`, `libhidapi-hidraw0`, `libstdc++6`, `hyperflux-next-linux (= 2.2.0-1)`, `hyperflux-next-openrazer-driver-dkms (= 2.2.0-1)` |
 
 Dependency roles map to packages on each distribution:
 
@@ -213,10 +213,10 @@ HyperFlux publishes `.rpm` packages for Fedora 44 in its signed package reposito
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.2-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.1.2-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `noarch` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.1.2-1` |
-| `hyperflux-next-full` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-linux = 2.1.2-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.2-1` |
+| `hyperflux-next-dkms` | `2.2.0-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.2.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-dkms = 2.2.0-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.2.0-1` | `noarch` | `dkms`, `systemd-udev`, `systemd`, `hyperflux-next-dkms = 2.2.0-1` |
+| `hyperflux-next-full` | `2.2.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc`, `systemd`, `systemd-udev`, `hyperflux-next-linux = 2.2.0-1`, `hyperflux-next-openrazer-driver-dkms = 2.2.0-1` |
 
 Dependency roles map to packages on each distribution:
 
@@ -295,10 +295,10 @@ HyperFlux publishes `.rpm` packages for openSUSE Tumbleweed in its signed packag
 
 | Package | Version | Architecture | Requires |
 | --- | --- | --- | --- |
-| `hyperflux-next-dkms` | `2.1.2-1` | `noarch` | `dkms` |
-| `hyperflux-next-linux` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.1.2-1` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `noarch` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.1.2-1` |
-| `hyperflux-next-full` | `2.1.2-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-linux = 2.1.2-1`, `hyperflux-next-openrazer-driver-dkms = 2.1.2-1` |
+| `hyperflux-next-dkms` | `2.2.0-1` | `noarch` | `dkms` |
+| `hyperflux-next-linux` | `2.2.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-dkms = 2.2.0-1` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.2.0-1` | `noarch` | `dkms`, `udev`, `systemd`, `hyperflux-next-dkms = 2.2.0-1` |
+| `hyperflux-next-full` | `2.2.0-1` | `x86_64` | `glibc >= 2.34`, `libgcc_s1`, `systemd`, `udev`, `hyperflux-next-linux = 2.2.0-1`, `hyperflux-next-openrazer-driver-dkms = 2.2.0-1` |
 
 Dependency roles map to packages on each distribution:
 

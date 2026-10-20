@@ -5,10 +5,10 @@
 mod lifecycle;
 
 use hfx_domain::{
-    ActivityState, ApplyOutcome, BatteryPercent, ConnectionMode, ContactState, DeviceKind,
-    EndpointId, EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId, LogicalDeviceId,
-    MonotonicMs, PairingState, PowerState, PresenceState, ProductId, ReceiverLifecycleState,
-    RouteKind, RouteState, SequenceNumber, SleepState,
+    ActivityState, ApplyOutcome, BatteryCharge, BatteryPercent, ConnectionMode, ContactState,
+    DeviceKind, EndpointId, EvidenceClaimId, EvidenceConfidence, FreshnessState, GenerationId,
+    LogicalDeviceId, MonotonicMs, PairingState, PowerState, PresenceState, ProductId,
+    ReceiverLifecycleState, RouteKind, RouteState, SequenceNumber, SleepState,
 };
 use lifecycle::{
     BatteryValue, ChildIdentity, EndpointIdentity, LifecycleError, LifecycleLimits,
@@ -527,6 +527,82 @@ fn battery_value_and_freshness_are_atomic_ordered_and_zero_safe() {
     assert_eq!(battery.value().value(), BatteryValue::Unavailable);
     assert_eq!(battery.freshness().value(), FreshnessState::Fresh);
     assert_eq!(battery.value().stamp(), battery.freshness().stamp());
+}
+
+#[test]
+fn battery_charge_annotates_only_a_reported_value() {
+    let mut machine = discovered_machine();
+    let (mouse_id, _) = register_wireless_child(&mut machine, "mouse-1", DeviceKind::Mouse, 2);
+    let charge = |machine: &ReceiverLifecycleMachine| {
+        machine
+            .current()
+            .expect("receiver exists")
+            .device(&mouse_id)
+            .expect("mouse exists")
+            .battery()
+            .charge()
+            .value()
+    };
+
+    assert_eq!(
+        machine.observe_battery_charge(&mouse_id, Some(BatteryCharge::Charging), stamp(1, 5, 5)),
+        ApplyOutcome::RejectedInvalidTransition
+    );
+    assert_eq!(charge(&machine), None);
+
+    let level = BatteryPercent::try_from(40_u8).expect("battery is valid");
+    assert_eq!(
+        machine.observe_battery_reported(&mouse_id, level, stamp(1, 6, 6)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(
+        machine.observe_battery_charge(&mouse_id, Some(BatteryCharge::Charging), stamp(1, 7, 7)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(charge(&machine), Some(BatteryCharge::Charging));
+    assert_eq!(
+        machine.observe_battery_charge(&mouse_id, Some(BatteryCharge::Discharging), stamp(1, 7, 7)),
+        ApplyOutcome::IgnoredOlderObservation
+    );
+
+    assert_eq!(
+        machine.observe_battery_reported(&mouse_id, level, stamp(1, 8, 8)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(charge(&machine), Some(BatteryCharge::Charging));
+    assert_eq!(
+        machine.observe_battery_charge(&mouse_id, None, stamp(1, 9, 9)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(charge(&machine), None);
+
+    assert_eq!(
+        machine.observe_battery_charge(
+            &mouse_id,
+            Some(BatteryCharge::Discharging),
+            stamp(1, 10, 10)
+        ),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(
+        machine.mark_battery_stale(&mouse_id, stamp(1, 11, 11)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(charge(&machine), None);
+
+    assert_eq!(
+        machine.observe_battery_reported(&mouse_id, level, stamp(1, 12, 12)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(
+        machine.observe_battery_charge(&mouse_id, Some(BatteryCharge::Charging), stamp(1, 13, 13)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(
+        machine.observe_battery_unavailable(&mouse_id, stamp(1, 14, 14)),
+        ApplyOutcome::Applied
+    );
+    assert_eq!(charge(&machine), None);
 }
 
 #[test]

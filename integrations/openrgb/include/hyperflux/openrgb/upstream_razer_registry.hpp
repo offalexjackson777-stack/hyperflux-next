@@ -12,6 +12,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -32,7 +33,7 @@ public:
 
     [[nodiscard]] RGBController& controller() noexcept;
     [[nodiscard]] const RGBController& controller() const noexcept;
-    [[nodiscard]] const v7::NativeRoute& route() const noexcept;
+    [[nodiscard]] const v8::NativeRoute& route() const noexcept;
     [[nodiscard]] std::string_view name() const noexcept;
     [[nodiscard]] std::string_view serial() const noexcept;
 
@@ -40,11 +41,11 @@ private:
     friend class UpstreamRazerControllerFactory;
 
     UpstreamRazerControllerInstance(
-        v7::NativeRoute route,
+        v8::NativeRoute route,
         std::unique_ptr<NativeFeatureExchange> exchange,
         std::unique_ptr<RGBController> controller);
 
-    v7::NativeRoute route_;
+    v8::NativeRoute route_;
     std::unique_ptr<NativeFeatureExchange> exchange_;
     std::unique_ptr<RGBController> controller_;
     std::string name_;
@@ -68,7 +69,7 @@ public:
             process_openrgb_client_id_factory(OpenRgbClientRole::Feature));
 
     [[nodiscard]] sdk::Result<std::unique_ptr<UpstreamRazerControllerInstance>> create(
-        const v7::NativeRoute& route);
+        const v8::NativeRoute& route);
 
 private:
     NativeFeatureExchangeFactory exchange_factory_;
@@ -102,8 +103,18 @@ struct UpstreamRazerControllerSummary
     std::string name;
     DeviceKind device_kind;
     ProductId product_id;
+    ReceiverId receiver_id;
+    GenerationId generation_id;
+    LogicalDeviceId device_id;
     bool registered;
     bool direct_suppressed;
+    /// Bridge battery observation for this device, when the bridge reported one.
+    std::optional<v8::BatteryObservation> battery {};
+    /// Whether the bridge last saw the device awake, asleep or out of reach.
+    std::optional<PresenceState> presence {};
+    /// When direct_suppressed: "Wired" or "Wireless" as OpenRGB's own Razer
+    /// controller for the same serial names it, or empty when its name does not say.
+    std::string direct_connection {};
 
     friend bool operator==(
         const UpstreamRazerControllerSummary&,
@@ -126,9 +137,12 @@ public:
     ~UpstreamRazerControllerRegistry();
 
     [[nodiscard]] sdk::Result<UpstreamRegistryUpdate> apply_routes(
-        std::vector<v7::NativeRoute> routes);
+        std::vector<v8::NativeRoute> routes);
     [[nodiscard]] UpstreamRegistryUpdate apply_direct_serials(
         std::vector<std::string> physically_queried_serials);
+    /// Records how OpenRGB's own controllers reach each direct serial, for
+    /// display only. Suppression never reads it.
+    void note_direct_connections(std::map<std::string, std::string, std::less<>> connections);
     void shutdown() noexcept;
 
     [[nodiscard]] std::size_t size() const noexcept;
@@ -146,7 +160,7 @@ private:
         bool direct_suppressed = false;
     };
 
-    [[nodiscard]] static std::string stable_id(const v7::NativeRoute& route);
+    [[nodiscard]] static std::string stable_id(const v8::NativeRoute& route);
     [[nodiscard]] bool should_suppress(const Entry& entry) const;
     void reconcile_registration(Entry& entry, UpstreamRegistryUpdate& update);
     [[nodiscard]] std::size_t registered_count_internal() const noexcept;
@@ -155,12 +169,17 @@ private:
     UpstreamRazerControllerFactory* factory_;
     std::map<std::string, Entry, std::less<>> entries_;
     std::set<std::string, std::less<>> direct_serials_;
+    std::map<std::string, std::string, std::less<>> direct_connections_;
     bool stopped_ = false;
 };
 
-[[nodiscard]] bool is_eligible_upstream_razer_route(const v7::NativeRoute& route) noexcept;
+[[nodiscard]] bool is_eligible_upstream_razer_route(const v8::NativeRoute& route) noexcept;
 [[nodiscard]] std::string canonical_queried_serial(std::string_view serial);
 [[nodiscard]] std::vector<std::string> collect_direct_razer_serials(
+    const std::vector<RGBControllerInterface*>& controllers);
+/// "Wired" or "Wireless" per direct serial, read from the "(Wired)" or
+/// "(Wireless)" suffix OpenRGB puts on its own Razer controller names.
+[[nodiscard]] std::map<std::string, std::string, std::less<>> collect_direct_razer_connections(
     const std::vector<RGBControllerInterface*>& controllers);
 
 } // namespace hyperflux::openrgb::native

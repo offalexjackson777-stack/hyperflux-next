@@ -67,6 +67,7 @@ fn integration() -> BridgeIntegration {
                         percentage: Some(
                             BatteryPercent::try_from(80_u8).expect("battery is valid"),
                         ),
+                        charge: None,
                         freshness: FreshnessState::Fresh,
                         confidence: EvidenceConfidence::Observed,
                         observed_at_ms: None,
@@ -120,6 +121,7 @@ fn paired_integration() -> BridgeIntegration {
             battery: BatteryObservation {
                 availability: TelemetryAvailability::Reported,
                 percentage: Some(BatteryPercent::try_from(67_u8).expect("battery is valid")),
+                charge: None,
                 freshness: FreshnessState::Fresh,
                 confidence: EvidenceConfidence::Observed,
                 observed_at_ms: None,

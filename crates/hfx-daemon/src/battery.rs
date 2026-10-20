@@ -15,7 +15,7 @@
 //! or the writer session ends, so an old charge value is never reused.
 
 use hfx_bridge::LifecycleObservationKind;
-use hfx_domain::{LogicalDeviceId, PairingState, RouteState};
+use hfx_domain::{BatteryCharge, LogicalDeviceId, PairingState, RouteState};
 use hfx_kernel_transport::{ChildBatteryLane, ChildBatteryState, ChildBatteryStatus};
 
 /// One decoded charge state, as the child profile's qualified charge or
@@ -29,6 +29,18 @@ pub enum ChildChargeReading {
     /// Not charging while the same report proves the device is off its
     /// charging mat or cable.
     Discharging,
+}
+
+impl ChildChargeReading {
+    /// The bridge charge fact for this reading; unknown carries none.
+    #[must_use]
+    pub const fn battery_charge(self) -> Option<BatteryCharge> {
+        match self {
+            Self::Unknown => None,
+            Self::Charging => Some(BatteryCharge::Charging),
+            Self::Discharging => Some(BatteryCharge::Discharging),
+        }
+    }
 }
 
 /// The published-state mirror for one receiver endpoint.
@@ -385,7 +397,7 @@ mod tests {
 
     #[test]
     fn the_keyboard_charge_sets_only_the_keyboard_lane() {
-        const KEYBOARD_MODEL: &str = "Razer DeathStalker V2 Pro Tenkeyless";
+        const KEYBOARD_MODEL: &str = "Razer DeathStalker V2 Pro TKL";
         let keyboard = device("paired-keyboard-0296");
         let both = |device_id: &LogicalDeviceId| {
             if *device_id == keyboard {

@@ -15,8 +15,8 @@
 namespace hyperflux
 {
 
-inline constexpr std::uint16_t minimum_protocol_version = 7;
-inline constexpr std::uint16_t maximum_protocol_version = 7;
+inline constexpr std::uint16_t minimum_protocol_version = 8;
+inline constexpr std::uint16_t maximum_protocol_version = 8;
 inline constexpr std::size_t max_wire_message_bytes = 1048576;
 inline constexpr std::size_t max_json_depth = 128;
 
@@ -174,6 +174,7 @@ struct BatteryObservation
 {
     TelemetryAvailability availability;
     std::optional<BatteryPercent> percentage;
+    std::optional<BatteryCharge> charge;
     FreshnessState freshness;
     EvidenceConfidence confidence;
     std::optional<MonotonicMs> observed_at_ms;

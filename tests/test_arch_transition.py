@@ -63,7 +63,7 @@ class PriorReleaseContracts(unittest.TestCase):
         self.assertEqual(("2.0.0-1", "2.0.1-1", "2.0.2-1"), tuple(PRIORS))
         self.assertTrue(all(prior.ref and prior.commit for prior in PRIORS.values()))
         self.assertTrue(load_arch_split(ROOT).active)
-        self.assertEqual("2.1.2-1", load_arch_split(ROOT).full_version)
+        self.assertEqual("2.2.0-1", load_arch_split(ROOT).full_version)
 
     def test_the_last_prior_release_is_two_packages(self) -> None:
         prior = PRIORS["2.0.2-1"]

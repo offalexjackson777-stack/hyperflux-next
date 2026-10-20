@@ -13,25 +13,25 @@ Each published download is listed with exactly what protects it from tampering.
 | Download | Contents | Protection |
 | --- | --- | --- |
 | Source SBOM | SPDX 2.3 inventory of source and build dependencies | Generated from this repository; not signed, and not an SBOM of package files |
-| Release [`v2.1.2`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2) | `hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst` and `SHA256SUMS` | `SHA256SUMS` is not signed; it is a checksum list fetched over HTTPS |
-| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next.db`, `hyperflux-next.db.tar.zst`, `hyperflux-next.files`, `hyperflux-next.files.tar.zst` | Each has a detached OpenPGP `.sig` from subkey `4C64CE4C855BC6844B4C1670C67DD9C42253ED27`; pacman requires `Required DatabaseRequired TrustedOnly` |
+| Release [`v2.2.0`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.2.0) | `hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst` and `SHA256SUMS` | `SHA256SUMS` is not signed; it is a checksum list fetched over HTTPS |
+| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst`, `hyperflux-next.db`, `hyperflux-next.db.tar.zst`, `hyperflux-next.files`, `hyperflux-next.files.tar.zst` | Each has a detached OpenPGP `.sig` from subkey `4C64CE4C855BC6844B4C1670C67DD9C42253ED27`; pacman requires `Required DatabaseRequired TrustedOnly` |
 | Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `SHA256SUMS-repository`, `hyperflux-next-arch-repository-fingerprint.txt`, `hyperflux-next-arch-repository-key.asc`, `hyperflux-next-arch-repository-manifest.json` | Not signed; the repository verifier recomputes or checks each one against `assurance/arch-repository.json` |
-| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-dkms-2.1.1-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.1.1-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.1.1-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.1.1-1-x86_64.pkg.tar.zst` | Kept from the previous release for downgrades; each has a detached OpenPGP `.sig` from the same subkey, and its SHA-256 is pinned in `assurance/arch-repository-retention.json`. The repository database does not list them |
-| Git tags and commits | `v2.1.2` and its history | Tags are not signed; commits are not signed |
+| Arch repository [`arch-repository`](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository) | `hyperflux-next-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-linux-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-openrazer-driver-dkms-2.1.2-1-x86_64.pkg.tar.zst`, `hyperflux-next-full-2.1.2-1-x86_64.pkg.tar.zst` | Kept from the previous release for downgrades; each has a detached OpenPGP `.sig` from the same subkey, and its SHA-256 is pinned in `assurance/arch-repository-retention.json`. The repository database does not list them |
+| Git tags and commits | `v2.2.0` and its history | Tags are not signed; commits are not signed |
 | Remote build attestations | Sigstore signatures, SLSA provenance, hosted build attestations | None exist; they are future work |
 
-The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F3850007159E8`. The `arch-repository` GitHub release is a machine-managed prerelease that serves pacman; `v2.1.2` is the human-facing release.
+The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F3850007159E8`. The `arch-repository` GitHub release is a machine-managed prerelease that serves pacman; `v2.2.0` is the human-facing release.
 
 | Package | Version | SHA-256 |
 | --- | --- | --- |
+| `hyperflux-next-dkms` | `2.2.0-1` | `03a025953c1fee493434b8b5919f2a2b4331bcdbb0a266147fc124af1cbfe6f5` |
+| `hyperflux-next-linux` | `2.2.0-1` | `2f0f87cdbc60ccfd691a937b0ffc7e1147a1db9cee5735c1a9fcad781df0bab4` |
+| `hyperflux-next-openrazer-driver-dkms` | `2.2.0-1` | `055a1628ff595549926f16b7062c0ffbe495fb18d30f3ffacb5ddf6d76c4db61` |
+| `hyperflux-next-full` | `2.2.0-1` | `76ab78fd823531e266e56ffec317256130a3ef4415df3717b56f64c56084d493` |
 | `hyperflux-next-dkms` | `2.1.2-1` | `48137b96720a535c82768648287de11efec28c65fa46227127fd3d8afb7a693f` |
 | `hyperflux-next-linux` | `2.1.2-1` | `096885cd7f8c6ce9ce9885fe115f79b1d71bd72f85fb23082635497cea3b1480` |
 | `hyperflux-next-openrazer-driver-dkms` | `2.1.2-1` | `38e7b82bf257e0cc20fdad213f4dbfe48b2d6cb34d5778d866c439c485893a5d` |
 | `hyperflux-next-full` | `2.1.2-1` | `ea2fdd61ef2937a6587eb1376a3db06ecf8820772d0d571b5c85ad7cd21e2df6` |
-| `hyperflux-next-dkms` | `2.1.1-1` | `d3f145a4409a2d4ef8629840332b7770d52be852746cc1031431a208c5749ffc` |
-| `hyperflux-next-linux` | `2.1.1-1` | `13e3e2e94b2de49bb958b43f4a8275ec710a4b8b5194b100a9030e2f4e3d810a` |
-| `hyperflux-next-openrazer-driver-dkms` | `2.1.1-1` | `1a4d44ef7bdc0036f801c05edde646ab91fab34256ffbe569de41aae1da6a4df` |
-| `hyperflux-next-full` | `2.1.1-1` | `5b5c4a812255c897d27eb2dbb81872c9e449fdc0421a1408ac5c28ec99017182` |
 
 ## Dependencies
 
@@ -39,10 +39,10 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - Checksummed Rust registry packages: 29
 - Repository Python projects: 1
 - Distribution-provided Python packages: 1
-- Vendored source packages: 1
+- Vendored source packages: 20
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Dependency list SHA-256: `beffa550a586e257b43d023a90d017787a77bf060a484cf31698e5704ca7cd60`
+- Dependency list SHA-256: `3bc550c44010b9b1f2a3ec94cdd02785880df5671d024ae1c6ff392601d76aec`
 
 ## Allowed Licenses
 
@@ -55,6 +55,7 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - `GPL-2.0-or-later`
 - `GPL-2.0-or-later AND CC-BY-SA-4.0`
 - `GPL-3.0-only`
+- `ISC`
 - `LGPL-2.1-or-later`
 - `MIT`
 - `MIT OR Apache-2.0`

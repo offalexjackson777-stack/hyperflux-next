@@ -36,12 +36,14 @@ struct NativeRouteWorkerConfig
     std::uint32_t reconnect_initial_ms = 25;
     std::uint32_t reconnect_max_ms = 2'000;
     std::uint16_t max_events = 64;
+    /// Device status (battery, charging, presence) refresh period; 0 disables it.
+    std::uint32_t status_interval_ms = 2'000;
 };
 
 struct NativeRouteSnapshot
 {
-    v7::EventCursor cursor;
-    std::vector<v7::NativeRoute> routes;
+    v8::EventCursor cursor;
+    std::vector<v8::NativeRoute> routes;
 
     friend bool operator==(const NativeRouteSnapshot&, const NativeRouteSnapshot&) = default;
 };
@@ -50,6 +52,8 @@ struct NativeRouteWorkerCallbacks
 {
     std::function<void(NativeRouteSnapshot)> on_snapshot;
     std::function<void(sdk::Error)> on_error;
+    /// Latest bridge device status, or nullopt once it can no longer be read.
+    std::function<void(std::optional<v8::BridgeSnapshot>)> on_device_status;
 };
 
 using NativeDiscoveryClientFactory =
@@ -60,7 +64,7 @@ using NativeDiscoveryClientFactory =
     OpenRgbClientIdFactory client_id_factory =
         process_openrgb_client_id_factory(OpenRgbClientRole::Discovery));
 
-/// Serialized protocol-v7 discovery owner.
+/// Serialized protocol-v8 discovery owner.
 ///
 /// Route events are hints. Every event or cursor gap is reconciled from one
 /// complete native-enumerate projection before the application sees it.
@@ -83,6 +87,7 @@ public:
     [[nodiscard]] NativeRouteWorkerState state() const noexcept;
     [[nodiscard]] std::optional<NativeRouteSnapshot> snapshot() const;
     [[nodiscard]] std::optional<sdk::Error> last_error() const;
+    [[nodiscard]] std::optional<v8::BridgeSnapshot> device_status() const;
 
 private:
     NativeRouteWorker(
@@ -94,6 +99,7 @@ private:
     [[nodiscard]] bool wait_interruptible(std::uint32_t delay_ms) noexcept;
     void recover(sdk::Error error, std::uint32_t& delay_ms) noexcept;
     [[nodiscard]] bool publish(NativeRouteSnapshot snapshot) noexcept;
+    void publish_status(std::optional<v8::BridgeSnapshot> status) noexcept;
     void fail_unexpected(const char* operation, const char* detail = nullptr) noexcept;
     [[nodiscard]] bool should_stop() const noexcept;
 
@@ -109,6 +115,7 @@ private:
     bool rescan_requested_ = false;
     std::optional<NativeRouteSnapshot> snapshot_;
     std::optional<sdk::Error> last_error_;
+    std::optional<v8::BridgeSnapshot> device_status_;
 };
 
 } // namespace hyperflux::openrgb::native

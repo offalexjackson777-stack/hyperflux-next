@@ -428,7 +428,7 @@ fn negotiate<R: RestorationRuntime>(
             params: hfx_protocol::ClientHello {
                 client_id: text::<ClientId>("client-1"),
                 client_name: text::<ClientName>("Core backend test"),
-                minimum_version: ProtocolVersion::try_from(1_u16).expect("version is canonical"),
+                minimum_version: ProtocolVersion::try_from(5_u16).expect("version is canonical"),
                 maximum_version: ProtocolVersion::try_from(5_u16).expect("version is canonical"),
                 required_features: Vec::new(),
                 optional_features: features

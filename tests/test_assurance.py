@@ -46,7 +46,7 @@ class AssuranceTests(unittest.TestCase):
         self.assertTrue(self.inventory.rust_security.deny_warnings)
         self.assertEqual(len(self.inventory.python_projects), 1)
         self.assertEqual(len(self.inventory.python_packages), 1)
-        self.assertEqual(len(self.inventory.vendored_packages), 1)
+        self.assertEqual(len(self.inventory.vendored_packages), 20)
         self.assertEqual(
             {package.id for package in self.inventory.upstream_packages},
             {"openrazer", "openrgb", "polychromatic"},
@@ -119,10 +119,10 @@ class AssuranceTests(unittest.TestCase):
         gates = context.gates
         self.assertEqual(load_release_gates(ROOT), gates)
         self.assertEqual(len(gates), 10)
-        self.assertEqual(context.target.product_version, "2.1.2")
+        self.assertEqual(context.target.product_version, "2.2.0")
         self.assertEqual(context.target.package_release, 1)
         self.assertEqual(context.target.state, "published-arch-release")
-        self.assertEqual(context.published_release, "2.1.2-1")
+        self.assertEqual(context.published_release, "2.2.0-1")
         self.assertTrue(all(gate.status == "verified" for gate in gates))
         self.assertEqual(gates[-1].id, "HFX-GATE-PUBLICATION-DECISION")
         self.assertEqual(gates[-1].status, "verified")
@@ -130,7 +130,7 @@ class AssuranceTests(unittest.TestCase):
 
     def test_release_target_claims_publication_only_for_the_published_version(self) -> None:
         with (
-            patch("hfxdev.release.published_arch_release", return_value="2.1.1-1"),
+            patch("hfxdev.release.published_arch_release", return_value="2.1.2-1"),
             self.assertRaisesRegex(ModelError, "publication interlock"),
         ):
             load_release_context(ROOT)

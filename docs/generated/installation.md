@@ -4,9 +4,9 @@
 
 This page lists what the HyperFlux packages install, what they leave alone, and how to turn HyperFlux on or roll it back, for packagers and for anyone who wants to know what an install changes on their system.
 
-Install manifest digest: `2a861e829965eaf5e1de4d37c6efa3e39b2fa11ad6c72726e831f94478905d96`.
+Install manifest digest: `6fcbaa3d799944dd8308c9114d40e5ee23695bd40fb87a9a5ff53fc8e9860251`.
 
-Packages at `2.1.2` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
+Packages at `2.2.0` release `1`: Core is `hyperflux-next-linux` (background service, SDK, and `hyperfluxctl`) with `hyperflux-next-dkms` (receiver driver sources). Full adds `hyperflux-next-openrazer-driver-dkms` (patched OpenRazer driver sources) and `hyperflux-next-full` (the OpenRazer and OpenRGB connections).
 
 ## What Installing Does And Does Not Do
 
@@ -37,7 +37,7 @@ The build plan contains `8` required and `0` optional build products.
 
 ## Installed Files
 
-The packages install `35` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
+The packages install `39` files. Every file goes under `/etc` or `/usr`, and no two files share a path.
 
 | Payload | Distribution component | Files | Preserved destination |
 | --- | --- | ---: | --- |
@@ -59,7 +59,11 @@ The packages install `35` files. Every file goes under `/etc` or `/usr`, and no 
 | `default-configuration` | `linux` | 1 | `/etc/hyperflux-next/bridge.json` |
 | `operator-troubleshooting` | `linux` | 1 | `-` |
 | `core-license` | `linux` | 1 | `-` |
+| `core-rust-crates-license` | `linux` | 1 | `-` |
 | `openrgb-license` | `full` | 1 | `-` |
+| `lucide-license` | `full` | 1 | `-` |
+| `full-rust-crates-license` | `full` | 1 | `-` |
+| `nlohmann-json-license` | `full` | 1 | `-` |
 
 ## Your Configuration
 

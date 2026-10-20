@@ -2,9 +2,9 @@
 
 <!-- HFX-GENERATED-BEGIN: release-status -->
 > [!IMPORTANT]
-> **HyperFlux Next 2.1.2 is the current release.** It is available for
+> **HyperFlux Next 2.2.0 is the current release.** It is available for
 > x86_64 computers from the signed HyperFlux package repository.
-> Read the [v2.1.2 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2).
+> Read the [v2.2.0 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.2.0).
 <!-- HFX-GENERATED-END: release-status -->
 
 ## What Is Out Now
@@ -46,17 +46,18 @@ the same key. Each distribution has its own guide:
 [Fedora](../user/install-fedora.md), and
 [openSUSE](../user/install-opensuse.md).
 
-## Planned Change In 2.2
+## Changed In 2.2
 
-HyperFlux 2.2 will stop accepting old versions of its local SDK protocol.
-Versions 1 to 4 and 6 are deprecated in 2.1 and will be removed in 2.2. From
-2.2 the bridge will speak only versions 5 and 7. The SDK and the OpenRGB
-integration that ship with HyperFlux already use those versions, so nothing
-changes for you if you only use them.
+HyperFlux 2.2 no longer accepts old versions of its local SDK protocol. The
+bridge speaks only versions 5, 7 and 8. The OpenRGB integration and the SDK
+that ship with HyperFlux already use those versions, so nothing changes for you
+if you only use them.
 
-If you run your own program that talks to HyperFlux, make sure it offers
-version 5 or 7. Everything version 6 added is also in version 7. The
-[SDK connector guide](../developer/sdk-connectors.md#deprecated-protocol-versions)
+If you run your own program that talks to HyperFlux and it only offers
+versions 1 to 4 or 6, it is refused with error `HFX-PROTOCOL-001`. The
+error message ends with the versions HyperFlux accepts, for example
+`Supported protocol versions: 5, 7, 8.` Update your program to version 5 or 8. The
+[SDK connector guide](../developer/sdk-connectors.md#retired-protocol-versions-22)
 lists the details.
 
 ## What Comes Next

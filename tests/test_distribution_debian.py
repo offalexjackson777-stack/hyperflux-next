@@ -66,6 +66,9 @@ class DebianPlanTests(unittest.TestCase):
         cls.runtime = load_linux_runtime(ROOT)
         cls.target = cls.catalog.targets["ubuntu"]
         cls.plans = debian_plans(cls.split, cls.target, cls.runtime, cls.catalog)
+        cls.plugin_plans = debian_plans(
+            cls.split, cls.catalog.targets["debian"], cls.runtime, cls.catalog
+        )
 
     def test_ubuntu_carries_both_editions(self) -> None:
         self.assertEqual(
@@ -150,9 +153,9 @@ class DebianPlanTests(unittest.TestCase):
         )
         postinst = dict(dkms.scripts)["postinst"]
         self.assertIn(
-            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.1.2 "" "" "${2:-}"', postinst
+            '/usr/lib/dkms/common.postinst hid-hyperflux-next 2.2.0 "" "" "${2:-}"', postinst
         )
-        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.1.2 --all", dict(dkms.scripts)["prerm"])
+        self.assertIn("dkms remove -m hid-hyperflux-next -v 2.2.0 --all", dict(dkms.scripts)["prerm"])
         core_postinst = dict(core.scripts)["postinst"]
         self.assertIn("systemd-sysusers hyperflux-next.conf", core_postinst)
         self.assertIn("systemd-tmpfiles --create hyperflux-next.conf", core_postinst)
@@ -197,6 +200,56 @@ class DebianPlanTests(unittest.TestCase):
         text = gzip.decompress(changelog).decode("utf-8")
         self.assertTrue(text.startswith("hyperflux-next-linux (2.1.0-1) stonking; urgency=medium\n"))
         self.assertIn("  Thu, 01 Jan 2026 00:00:00 +0000\n", text)
+
+    def test_copyright_scopes_the_bundled_icon_license_to_its_files(self) -> None:
+        full = next(plan for plan in self.plugin_plans if "ISC" in plan.licenses)
+        text = copyright_text(full)
+        paragraphs = text.split("\n\n")
+        self.assertNotIn("ISC", paragraphs[1])
+        self.assertTrue(paragraphs[2].startswith("Files: integrations/openrgb/icons/*\n"))
+        self.assertIn("Lucide Contributors", paragraphs[2])
+        self.assertTrue(paragraphs[2].endswith("License: ISC"))
+        self.assertTrue(paragraphs[3].startswith("Files: integrations/openrgb/icons/hyperflux-*\n"))
+        self.assertNotIn("ISC", paragraphs[3])
+        self.assertIn("\nLicense: ISC\n Permission to use, copy, modify", text)
+        for plan in (*self.plans, *self.plugin_plans):
+            if "ISC" not in plan.licenses:
+                self.assertNotIn("Lucide", copyright_text(plan))
+
+    def test_full_without_the_openrgb_plugin_leaves_out_its_notices(self) -> None:
+        full = self.plans[-1]
+        self.assertFalse(full.openrgb_plugin)
+        self.assertEqual(
+            full.licenses, ("GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "MIT")
+        )
+        text = copyright_text(full)
+        for absent in ("integrations/openrgb/icons", "Lucide", "nlohmann", "Niels Lohmann", "ISC"):
+            self.assertNotIn(absent, text)
+        self.assertIn("Files: .cargo/registry/src/*\n", text)
+        plugin_full = self.plugin_plans[-1]
+        self.assertTrue(plugin_full.openrgb_plugin)
+        self.assertEqual(
+            plugin_full.licenses,
+            ("GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "ISC", "MIT"),
+        )
+        self.assertEqual([plan.openrgb_plugin for plan in self.plugin_plans[:-1]], [False] * 3)
+
+    def test_copyright_scopes_the_bundled_mit_code_to_its_packages(self) -> None:
+        for plan in (*self.plans, *self.plugin_plans):
+            text = copyright_text(plan)
+            paragraphs = text.split("\n\n")
+            with self.subTest(output=plan.output, plugin=plan.openrgb_plugin):
+                self.assertNotIn("Expat", paragraphs[1])
+                crates = "Files: .cargo/registry/src/*\n" in text
+                nlohmann = "Files: sdk/cpp/vendor/include/*\n" in text
+                self.assertEqual(crates, plan.output in {"core", "full"})
+                self.assertEqual(nlohmann, plan.output == "full" and plan.openrgb_plugin)
+                self.assertEqual("MIT" in plan.licenses, crates)
+                if crates:
+                    self.assertIn("\nLicense: Expat\nComment: Rust crates from crates.io", text)
+                    self.assertIn("\nLicense: Expat\n Permission is hereby granted", text)
+                if nlohmann:
+                    self.assertIn("Copyright: 2013-2023 Niels Lohmann\nLicense: Expat\n", text)
 
     def test_relations_translate_or_fail_closed(self) -> None:
         self.assertEqual(debian_relation("foo", "x"), "foo")

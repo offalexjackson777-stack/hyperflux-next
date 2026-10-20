@@ -357,7 +357,7 @@ struct ErrorDescriptor
     std::string_view docs_path;
 };
 
-inline constexpr std::string_view error_catalog_sha256 = "17801d934340db6478334b35bac955657f758321b4c299c63a4df106b192098f";
+inline constexpr std::string_view error_catalog_sha256 = "31116bea1ff363c1c7a4bb8d1fb5b3cc26eb9c071e54abed6871f0b9906965d0";
 inline constexpr std::size_t max_error_count = 256;
 inline constexpr std::size_t max_remediation_count = 128;
 inline constexpr std::size_t max_safe_detail_fields = 12;
@@ -389,7 +389,7 @@ inline constexpr std::array<RemediationDescriptor, 28> remediations {{
     {RemediationId::StartBridge, "Start the bridge service", "Start or restart the compatible HyperFlux bridge service.", "Run Doctor and confirm the bridge diagnostic endpoint is ready.", true},
     {RemediationId::SubmitBeforeDeadline, "Submit a fresh operation", "Create a new request with a deadline that has not elapsed; do not revive the expired request.", "Confirm admission occurs before the new monotonic deadline.", false},
     {RemediationId::UpdateIntegration, "Update the application integration", "Install an integration compatible with the negotiated HyperFlux SDK protocol.", "Restart the application and confirm protocol negotiation succeeds.", false},
-    {RemediationId::UpdateProtocolPeer, "Update the protocol peer", "Update either peer so their supported protocol version ranges overlap.", "Repeat negotiation and confirm one common protocol version is selected.", false},
+    {RemediationId::UpdateProtocolPeer, "Update the protocol peer", "Update either peer so the client offers at least one protocol version the bridge serves.", "Repeat negotiation and confirm one common protocol version is selected.", false},
     {RemediationId::VerifyProfileCatalog, "Verify the profile catalog", "Reload the generated profile catalog and retain read-only behavior until its digest matches.", "Confirm the active profile identifier, revision, and digest match the generated catalog.", true},
     {RemediationId::WakePairedDevice, "Wake the paired device", "Move or click the paired device. If it does not appear within 30 seconds, switch it off and on. If it still does not appear, create a support bundle.", "Run Doctor and confirm a paired device has a live route.", false},
 }};
@@ -527,11 +527,12 @@ inline constexpr std::array<SafeDetailFieldDescriptor, 3> details_22 {{
     {"profile_id", SafeDetailKind::Identifier, true, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Selected profile identity."},
 }};
 
-inline constexpr std::array<SafeDetailFieldDescriptor, 4> details_23 {{
+inline constexpr std::array<SafeDetailFieldDescriptor, 5> details_23 {{
     {"client_max_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Highest protocol version supported by the client."},
     {"client_min_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Lowest protocol version supported by the client."},
-    {"server_max_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Highest protocol version supported by the bridge."},
-    {"server_min_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Lowest protocol version supported by the bridge."},
+    {"server_max_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Highest protocol version the bridge serves. Lower versions can be retired; see server_supported_versions."},
+    {"server_min_version", SafeDetailKind::U16, true, std::nullopt, 65535ULL, std::span<const std::string_view>{}, PrivacyClass::Public, "Lowest protocol version the bridge serves. Higher versions can be retired; see server_supported_versions."},
+    {"server_supported_versions", SafeDetailKind::Text, false, 128ULL, std::nullopt, std::span<const std::string_view>{}, PrivacyClass::Public, "Every protocol version the bridge serves, ascending and comma-separated, such as 5,7."},
 }};
 
 inline constexpr std::array<SafeDetailFieldDescriptor, 1> details_24 {{
@@ -825,7 +826,7 @@ inline constexpr std::array<ErrorDescriptor, 33> errors {{
         SideEffectCertaintyPolicy::NotApplicable,
         RemediationId::UpdateProtocolPeer, details_23,
         {ErrorLifecycleState::Active, "0.0.0-dev.1", std::nullopt, std::nullopt},
-        ErrorOwner::Sdk, "The client and bridge protocol version ranges do not overlap.",
+        ErrorOwner::Sdk, "The client protocol version range contains no version the bridge serves; the bridge can serve a set with gaps, not a full range.",
         "The application and HyperFlux service are not protocol-compatible.", PrivacyClass::Public,
         "docs/generated/error-catalog.md#hfx-protocol-001"
     },
