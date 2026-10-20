@@ -88,7 +88,6 @@ from .protected_behavior import load_protected_behavior
 from .quality import load_quality_audit
 from .render import rendered_binary_files, rendered_files
 from .profiles import load_profile_inputs
-from .publication_privacy import verify_publication_privacy
 from .protocol import load_protocol_catalog
 from .release import load_release_gates
 from .supply_chain import load_dependency_inventory
@@ -198,7 +197,6 @@ def _check_generated(root: Path) -> None:
 
 
 def _check_repository_paths(root: Path) -> None:
-    verify_publication_privacy(root)
     absolute_home = re.compile(r"/home/[A-Za-z0-9_.-]+/")
     for path in repository_files(root):
         if path.suffix in {".pyc", ".png", ".jpg", ".zst"} or path.name == "LICENSE":

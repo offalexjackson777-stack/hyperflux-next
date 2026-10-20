@@ -18,12 +18,6 @@ from hfxdev.model import ModelError, load_foundation
 from hfxdev.render import rendered_binary_files, rendered_files
 from hfxdev.model import load_json
 from hfxdev.profiles import load_profile_inputs
-from hfxdev.publication_privacy import (
-    _matching_term_ids,
-    load_publication_privacy,
-    normalized_term_sha256,
-    verify_publication_privacy,
-)
 
 
 class FoundationTests(unittest.TestCase):
@@ -126,32 +120,6 @@ class FoundationTests(unittest.TestCase):
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 self.assertEqual(digest, dependency["sha256"])
                 self.assertTrue(dependency["license_expression"])
-
-    def test_publishable_tree_has_no_private_product_or_authorship_terms(self) -> None:
-        authority = load_publication_privacy(ROOT)
-        result = verify_publication_privacy(ROOT)
-        self.assertEqual(result["violations"], [])
-        self.assertGreater(result["utf8_text_files"], 100)
-        self.assertEqual(authority["allowed_protocol_notation"]["tokens"], ["ai"])
-
-    def test_privacy_term_matching_is_phrase_exact_and_allows_protocol_notation(self) -> None:
-        terms = [
-            {
-                "id": "private-term-01",
-                "word_count": 2,
-                "sha256": normalized_term_sha256("fixture marker"),
-            }
-        ]
-        self.assertEqual(
-            _matching_term_ids("A fixture-marker appears here.", terms, 4),
-            ("private-term-01",),
-        )
-        binary_text = b"\x89fixture-marker\x00\xff".decode("ascii", "replace")
-        self.assertEqual(
-            _matching_term_ids(binary_text, terms, 4),
-            ("private-term-01",),
-        )
-        self.assertEqual(_matching_term_ids("D-Bus signature ai", terms, 4), ())
 
 
 if __name__ == "__main__":

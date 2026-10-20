@@ -43,7 +43,6 @@ Records what the project has checked and how: design coverage, performance budge
 - [`assurance/journey-source-coverage.json`](journey-source-coverage.json)
 - [`assurance/performance-budgets.json`](performance-budgets.json)
 - [`assurance/protected-behavior.json`](protected-behavior.json)
-- [`assurance/publication-privacy.json`](publication-privacy.json)
 - [`assurance/quality-audit.json`](quality-audit.json)
 - [`assurance/release-gates.json`](release-gates.json)
 - [`assurance/rust-coverage.json`](rust-coverage.json)

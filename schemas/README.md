@@ -40,9 +40,8 @@ Holds the JSON Schemas that check every data file the repository shares between 
 - [`schemas/native-device-onboarding-draft.schema.json`](native-device-onboarding-draft.schema.json); [`schemas/native-device-promotion-assessment.schema.json`](native-device-promotion-assessment.schema.json)
 - [`schemas/document-catalog.schema.json`](document-catalog.schema.json); [`schemas/documentation-audit.schema.json`](documentation-audit.schema.json)
 - [`schemas/documentation-render-policy.schema.json`](documentation-render-policy.schema.json); [`schemas/documentation-review.schema.json`](documentation-review.schema.json)
-- [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json); [`schemas/publication-privacy.schema.json`](publication-privacy.schema.json)
-- [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json); [`schemas/owner-report-policy.schema.json`](owner-report-policy.schema.json)
-- [`schemas/owner-report.schema.json`](owner-report.schema.json)
+- [`schemas/journey-source-coverage.schema.json`](journey-source-coverage.schema.json); [`schemas/source-inventory-public-projection.schema.json`](source-inventory-public-projection.schema.json)
+- [`schemas/owner-report-policy.schema.json`](owner-report-policy.schema.json); [`schemas/owner-report.schema.json`](owner-report.schema.json)
 
 ## Verify
 
