@@ -42,7 +42,7 @@ The signing subkey belongs to primary key `8BF8A266E756BD1C24C930918B3F385000715
 - Vendored source packages: 20
 - Pinned application upstreams: 3
 - Immutable workflow actions: 7
-- Dependency list SHA-256: `3bc550c44010b9b1f2a3ec94cdd02785880df5671d024ae1c6ff392601d76aec`
+- Dependency list SHA-256: `945f5423e8dd331997ac91fd7a0c14a1653af915e8923b6d0bcf0cc753683143`
 
 ## Allowed Licenses
 
@@ -73,7 +73,7 @@ It covers source and build dependencies only. It does not list the files inside 
 | `docker/build-push-action` | `v7.4.0` | `c3c9e263c25d99ce0380d002d59b67737d91b0dc` | `Apache-2.0` |
 | `actions/cache` | `v6.1.0` | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` | `MIT` |
 | `actions/checkout` | `v7.0.1` | `3d3c42e5aac5ba805825da76410c181273ba90b1` | `MIT` |
-| `github/codeql-action` | `v4.38.3` | `24c54180a607b1449ed407dd24f251e4e9147c8d` | `MIT` |
+| `github/codeql-action` | `v4.39.0` | `6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee` | `MIT` |
 | `actions/dependency-review-action` | `v5.0.0` | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` | `MIT` |
 | `docker/setup-buildx-action` | `v4.4.1` | `f87e5991a6d7451dcb8d9637bfbc97413f497069` | `Apache-2.0` |
 | `actions/upload-artifact` | `v7.0.2` | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | `MIT` |

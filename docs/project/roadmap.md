@@ -45,16 +45,13 @@ are guides for [Ubuntu](../user/install-ubuntu.md),
 
 ## Next
 
-- **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
-  planned. It is not published yet; until it is, use the
-  [installation guide](../user/installation.md).
-
-## Later
-
 - **Real-hardware checks on other distributions.** The Ubuntu 26.10, Debian
   14, Fedora 44, and openSUSE Tumbleweed packages are published. They are
   built and tested automatically, but not yet confirmed on real hardware. Each
   one is checked on its own; a delay on one does not hold back another.
+
+## Later
+
 - **More reactive effects.** Reactive and Fire lighting for devices on the
   receiver, and Ripple on both keyboards when two receivers are connected
   ([#54](https://github.com/offalexjackson777-stack/hyperflux-next/issues/54)).

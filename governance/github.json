@@ -166,8 +166,8 @@
       {
         "id": "codeql",
         "repository": "github/codeql-action",
-        "version": "v4.38.3",
-        "commit": "24c54180a607b1449ed407dd24f251e4e9147c8d",
+        "version": "v4.39.0",
+        "commit": "6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee",
         "license_expression": "MIT"
       },
       {
