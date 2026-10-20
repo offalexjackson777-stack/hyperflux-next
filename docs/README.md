@@ -3,8 +3,8 @@
 Start with the door that fits what you want to do.
 
 <!-- HFX-GENERATED-BEGIN: release-summary -->
-**HyperFlux Next 2.1.2 is the current release.** Read the
-[v2.1.2 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.1.2).
+**HyperFlux Next 2.2.0 is the current release.** Read the
+[v2.2.0 release notes](https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.2.0).
 <!-- HFX-GENERATED-END: release-summary -->
 
 ## Use HyperFlux

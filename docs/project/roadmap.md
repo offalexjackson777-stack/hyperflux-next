@@ -29,6 +29,12 @@ later. Nothing under Next or Later is available yet.
   receiver, per-key lighting reaches the keyboard about three times faster,
   each battery shows under its own device name, and Doctor finds two more
   problems that hide OpenRazer devices or keep Ripple still.
+- **2.2.0:** OpenRGB gets a HyperFlux Next page in its Information list with
+  a card for each paired keyboard and mouse that shows its battery level and
+  charging state. A mouse resting on its charging mat shows as charging right
+  after login. Every device uses the name OpenRazer gives it. Old versions of
+  the local SDK protocol are retired; HyperFlux now accepts versions 5, 7 and
+  8, which the bundled SDK and the OpenRGB integration already use.
 
 Install the current release from the signed HyperFlux package repository.
 The [installation guide](../user/installation.md) covers Arch Linux, and there
@@ -42,10 +48,6 @@ are guides for [Ubuntu](../user/install-ubuntu.md),
 - **An AUR package.** Publishing HyperFlux Next on the Arch User Repository is
   planned. It is not published yet; until it is, use the
   [installation guide](../user/installation.md).
-- **Old SDK protocol versions removed in 2.2.** Versions 1 to 4 and 6 of the
-  local SDK protocol are retired in 2.2, after their deprecation in 2.1. The
-  bundled SDK and the OpenRGB integration already use the remaining versions,
-  5 and 7. See [release status](release-status.md#planned-change-in-22).
 
 ## Later
 
