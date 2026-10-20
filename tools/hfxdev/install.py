@@ -757,6 +757,8 @@ def _check_cross_contract(
         "full-component-descriptor",
         "openrgb-license",
         "lucide-license",
+        "full-rust-crates-license",
+        "nlohmann-json-license",
     }:
         raise ModelError("full component payload ownership differs from the product contract")
     bridge_drop_in = payload_by_id["full-bridge-integration-drop-in"]
@@ -798,6 +800,25 @@ def _check_cross_contract(
         or icon_license.include
     ):
         raise ModelError("bundled icon license differs from the exact payload contract")
+    # Notices for third-party code compiled into the programs: the Rust crates
+    # in every package with a Rust program, and nlohmann/json in the plugin.
+    for payload_id, component, source, name in (
+        ("core-rust-crates-license", "linux", "packaging/licenses/LICENSE-rust-crates", "LICENSE-rust-crates"),
+        ("full-rust-crates-license", "full", "packaging/licenses/LICENSE-rust-crates", "LICENSE-rust-crates"),
+        ("nlohmann-json-license", "full", "sdk/cpp/vendor/LICENSE.MIT", "LICENSE-nlohmann-json"),
+    ):
+        notice = payload_by_id.get(payload_id)
+        if (
+            notice is None
+            or notice.distribution_component != component
+            or notice.source != source
+            or notice.destination
+            != f"/usr/share/licenses/hyperflux-next-{component}/{name}"
+            or notice.mode != 0o644
+            or notice.preserve
+            or notice.include
+        ):
+            raise ModelError(f"{payload_id} differs from the exact payload contract")
 
     build_destinations = {build.destination for build in builds if build.destination is not None}
     payload_destinations = {str(file.destination) for file in files}

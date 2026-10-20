@@ -43,7 +43,8 @@
       "edition": "linux",
       "description": "HyperFlux receiver driver, bridge, SDK, CLI, and base services",
       "licenses": [
-        "GPL-2.0-only"
+        "GPL-2.0-only",
+        "MIT"
       ],
       "builds": [
         "bridge-daemon",
@@ -59,7 +60,8 @@
         "device-permissions",
         "default-configuration",
         "operator-troubleshooting",
-        "core-license"
+        "core-license",
+        "core-rust-crates-license"
       ],
       "dependency_roles": [
         "c-runtime",
@@ -120,7 +122,8 @@
         "GPL-2.0-only",
         "GPL-2.0-or-later",
         "GPL-3.0-only",
-        "ISC"
+        "ISC",
+        "MIT"
       ],
       "builds": [
         "openrazer-native-relay",
@@ -134,7 +137,9 @@
         "full-bridge-integration-drop-in",
         "full-component-descriptor",
         "openrgb-license",
-        "lucide-license"
+        "lucide-license",
+        "full-rust-crates-license",
+        "nlohmann-json-license"
       ],
       "dependency_roles": [
         "c-runtime",
