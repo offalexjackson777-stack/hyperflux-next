@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/documentation-screenshot-manifest.schema.json",
   "schema": "hyperflux-documentation-screenshot-manifest-v1",
-  "source_revision": "400acaf9ea2369aab77d7ba4782185df0d10163d",
-  "render_result_sha256": "e53d48c1c8360c8bd209ef1692ede02ee4a4a579643a098e80b9e1ebd5b10a72",
+  "source_revision": "ecdfbd40755df0c38dd727d3ca01fd592100452f",
+  "render_result_sha256": "96c4bf560427fa91413976f69639b92ea6e87ce0ecd80dacb7650b0752a0b868",
   "screenshots": [
     {
       "file": "screenshots/CONTRIBUTING--1280--dark.png",

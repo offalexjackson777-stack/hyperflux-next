@@ -1409,9 +1409,8 @@ class UserDocumentationContracts(unittest.TestCase):
         self.assertIn("**2.0.0:**", shipped)
         self.assertIn("**2.0.1:**", shipped)
         self.assertIn("**2.0.2:**", shipped)
-        self.assertNotIn("AUR", shipped)
-        later = roadmap[positions[1] :]
-        self.assertIn("not published yet", later)
+        self.assertNotIn("AUR", roadmap)
+        self.assertIn("not yet confirmed on real hardware", roadmap[positions[1] : positions[2]])
         for command in ("yay ", "paru ", "makepkg", "git clone"):
             self.assertNotIn(command, roadmap)
 

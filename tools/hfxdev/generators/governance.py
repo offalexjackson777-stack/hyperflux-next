@@ -9,7 +9,13 @@ import yaml
 
 from ..arch_repository import ArchRepositoryPolicy
 from ..development import CARGO_CACHE_PATH, UPSTREAM_CACHE_PATH
-from ..governance import DISTRIBUTION_PACKAGE_CHECK, KERNEL_CANARY_CHECK, GitHubGovernance
+from ..governance import (
+    DEPENDABOT_SYNC_SECRET,
+    DEPENDENCY_UPDATE_BRANCH,
+    DISTRIBUTION_PACKAGE_CHECK,
+    KERNEL_CANARY_CHECK,
+    GitHubGovernance,
+)
 from ..owner_reports import CONFIRMATION_LABELS as OWNER_CONFIRMATION_LABELS
 from ..owner_reports import CONFIRMATIONS_HEADING as OWNER_CONFIRMATIONS_HEADING
 
@@ -960,6 +966,74 @@ def dependency_review_workflow(governance: GitHubGovernance) -> str:
     return _yaml(value, governance)
 
 
+def dependabot_sync_workflow(governance: GitHubGovernance) -> str:
+    checkout = governance.actions_by_id["checkout"]
+    value = {
+        "name": "Dependabot sync",
+        "on": {"pull_request": {}},
+        "permissions": {"contents": "read"},
+        "concurrency": {
+            "group": "dependabot-sync-${{ github.head_ref }}",
+            "cancel-in-progress": True,
+        },
+        "env": {"HFX_CI_IMAGE": governance.development_image},
+        "jobs": {
+            "dependabot-sync": {
+                "name": "Dependabot sync",
+                "if": (
+                    "${{ github.actor == 'dependabot[bot]' && "
+                    "github.event.pull_request.head.repo.full_name == github.repository }}"
+                ),
+                "runs-on": governance.runner,
+                "timeout-minutes": 20,
+                "steps": [
+                    {
+                        "name": "Require the sync deploy key",
+                        "env": {"SYNC_KEY_PRESENT": f"${{{{ secrets.{DEPENDABOT_SYNC_SECRET} != '' }}}}"},
+                        "run": (
+                            'if [ "$SYNC_KEY_PRESENT" != true ]; then\n'
+                            f'  echo "::error::Add the {DEPENDABOT_SYNC_SECRET} Dependabot secret; '
+                            'see docs/generated/github-governance.md"\n'
+                            "  exit 1\n"
+                            "fi\n"
+                        ),
+                    },
+                    {
+                        "name": "Check out the Dependabot branch",
+                        "uses": checkout.uses,
+                        "with": {
+                            "ref": "${{ github.head_ref }}",
+                            "ssh-key": f"${{{{ secrets.{DEPENDABOT_SYNC_SECRET} }}}}",
+                            "persist-credentials": True,
+                        },
+                    },
+                    *_build_environment(governance),
+                    {
+                        "name": "Carry the update into the authorities",
+                        "run": './hfx ci dependency-sync --image "$HFX_CI_IMAGE"',
+                    },
+                    {
+                        "name": "Push the carried update",
+                        "env": {"HEAD_REF": "${{ github.head_ref }}"},
+                        "run": (
+                            "if git diff --quiet; then\n"
+                            '  echo "The update needs no authority change."\n'
+                            "  exit 0\n"
+                            "fi\n"
+                            "git config user.name 'github-actions[bot]'\n"
+                            "git config user.email '41898282+github-actions[bot]@users.noreply.github.com'\n"
+                            "git add --update\n"
+                            "git commit --quiet --message 'build: carry the Dependabot update into the authorities'\n"
+                            'git push origin "HEAD:refs/heads/$HEAD_REF"\n'
+                        ),
+                    },
+                ],
+            }
+        },
+    }
+    return _yaml(value, governance)
+
+
 def dependabot(governance: GitHubGovernance, toolchain_packages: tuple[str, ...] = ()) -> str:
     schedule = {"interval": "weekly", "day": governance.dependency_update_day}
     value = {
@@ -968,6 +1042,7 @@ def dependabot(governance: GitHubGovernance, toolchain_packages: tuple[str, ...]
             {
                 "package-ecosystem": "github-actions",
                 "directory": "/",
+                "target-branch": DEPENDENCY_UPDATE_BRANCH,
                 "schedule": schedule,
                 "open-pull-requests-limit": 5,
                 "groups": {"github-actions": {"patterns": ["*"]}},
@@ -976,6 +1051,7 @@ def dependabot(governance: GitHubGovernance, toolchain_packages: tuple[str, ...]
             {
                 "package-ecosystem": "cargo",
                 "directory": "/",
+                "target-branch": DEPENDENCY_UPDATE_BRANCH,
                 "schedule": schedule,
                 "open-pull-requests-limit": 5,
                 "groups": {"rust-dependencies": {"patterns": ["*"]}},
@@ -985,6 +1061,7 @@ def dependabot(governance: GitHubGovernance, toolchain_packages: tuple[str, ...]
                 {
                     "package-ecosystem": "pip",
                     "directory": directory,
+                    "target-branch": DEPENDENCY_UPDATE_BRANCH,
                     "schedule": schedule,
                     "open-pull-requests-limit": 3,
                     "groups": {"python-dependencies": {"patterns": ["*"]}},
@@ -1525,6 +1602,7 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "| Full verification | Pull request, weekly, or manual | None | None | Source-bound full evidence |",
         "| CodeQL | Pull requests, main, weekly | GitHub service only | None | C/C++ and Python analysis |",
         "| Dependency review | Pull requests | GitHub service only | None | Dependency policy decision |",
+        "| Dependabot sync | Dependabot pull requests | None | None | Carries the update into the authorities and pushes it to the same pull request |",
         "| Kernel canary | Weekly or manual | Arch mirrors, kernel.org, and the pinned app sources | None | Driver builds against coming kernels; never required for merging |",
         "| Distribution packages | Pull requests, weekly, or manual | Ubuntu, Debian, Fedora and openSUSE archives for the check tools, and OpenRazer's openSUSE Build Service repository | None | Ubuntu 26.10 and Debian 14 `.deb` files and Fedora 44 and openSUSE Tumbleweed `.rpm` files, checked and not published; required for merging into `main` |",
         "",
@@ -1537,6 +1615,21 @@ def markdown(governance: GitHubGovernance, arch_repository: ArchRepositoryPolicy
         "On Fedora and openSUSE `rpmbuild` builds every `.rpm` file from one generated spec inside the release image, so the host never needs RPM tools. The workflow prints each header, file list and scriptlet with `rpm`, fails on any `rpmlint` error except those the generated `rpmlint` configuration accepts by name and reason, and installs Core and then Full with `dnf` or `zypper`. Those releases do not ship OpenRazer, so with Full installed the workflow adds OpenRazer's own `hardware:razer` repository from the openSUSE Build Service and installs its `openrazer-daemon` and `python3-openrazer`. It trusts the repository's signing key only when the key's fingerprint matches the one pinned in the generator, keeps package signature checks on, checks that both packages carry that key's signature, and fails if OpenRazer's own driver package is installed instead of the HyperFlux one. The scriptlets only register and build the DKMS sources and never enable or start a unit, which the workflow checks under `/etc/systemd`. "
         "Then `dkms build` compiles the HyperFlux driver and the Full OpenRazer driver against every kernel each release offers: Ubuntu's generic kernel, which is the only one Ubuntu 26.10 ships, Debian's stock and realtime kernels, Fedora's release and updates kernels, and openSUSE's longterm and default kernels. `modinfo` checks each module's vermagic, and every installed program is checked against the glibc that the release ships; on Fedora and openSUSE strong symbol references must also stay within the declared glibc floor, and the DKMS signing certificate must exist at `/var/lib/dkms/mok.pub`. "
         "Finally the packages are removed, including the stock OpenRazer service, and DKMS must no longer list either driver. The package files are kept as a workflow artifact for 14 days and are never published. Nothing is loaded and no device is touched.",
+        "",
+        "## Dependabot Updates",
+        "",
+        f"Dependabot opens its pull requests against `{DEPENDENCY_UPDATE_BRANCH}`. It changes only the files it understands: the workflow files and `Cargo.lock`. The same pins are also recorded in `governance/github.json`, `assurance/dependencies.json`, the Rust crate notices and the public API fixture lock, so its pull requests alone would always fail the generated-files check.",
+        "",
+        "The Dependabot sync workflow fixes that. On each Dependabot pull request it runs `./hfx dependencies sync` in the pinned development image with `--network none`. The command copies the new versions into those files and runs `./hfx generate`. If anything changed, the workflow commits it and pushes it to the same pull request, and the normal checks then run on that commit. It refuses an update that needs a person instead: a crate that was added or removed, which needs a license review, or workflows that disagree about one action's pin.",
+        "",
+        f"A push made with the workflow's own token would not start the checks again, so the workflow pushes with a deploy key that has write access. Its private half is stored as the `{DEPENDABOT_SYNC_SECRET}` Dependabot secret, which only runs that Dependabot started can read. To set it up once, the maintainer runs:",
+        "",
+        "```bash",
+        'ssh-keygen -t ed25519 -N "" -C "Dependabot sync" -f dependabot-sync-key',
+        "gh repo deploy-key add dependabot-sync-key.pub --allow-write --title \"Dependabot sync\"",
+        f"gh secret set {DEPENDABOT_SYNC_SECRET} --app dependabot < dependabot-sync-key",
+        "rm dependabot-sync-key dependabot-sync-key.pub",
+        "```",
         "",
         "## Checks Required Before Merging",
         "",

@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/documentation-audit.schema.json",
   "schema": "hyperflux-documentation-audit-v3",
-  "source_revision": "400acaf9ea2369aab77d7ba4782185df0d10163d",
+  "source_revision": "ecdfbd40755df0c38dd727d3ca01fd592100452f",
   "inputs": {
     "catalog_sha256": "efda44f1259c6225a51bf4b1f24475584331a88165ecfd917b14abdea429cfdf",
     "policy_sha256": "dabb7014747af7749d0d7dd246ed3a52400124df4c448826f2c785068df57939",
     "renderer_sha256": "741ae4b06daa2a85f6adddb36728f825b3d670be457d12e03c67ae762a17c631",
     "journey_source_coverage_sha256": "e0dbcd168f357964f734f069513d8a6385cc8b4b908dd9640dcf11c229d1a1f7",
-    "rendered_documents_sha256": "b6411d392248d3c5f5c8cec2fbd9d29d3405165bb9f0977144749d0fa6529439"
+    "rendered_documents_sha256": "f2cf61e92721b58189b8749e3fb349439f8c33928daa4e2d09590fc2c319ebea"
   },
   "render": {
     "status": "passed",
-    "result_sha256": "e53d48c1c8360c8bd209ef1692ede02ee4a4a579643a098e80b9e1ebd5b10a72",
+    "result_sha256": "96c4bf560427fa91413976f69639b92ea6e87ce0ecd80dacb7650b0752a0b868",
     "document_count": 89,
     "check_count": 534,
     "screenshot_count": 108,
@@ -27,7 +27,7 @@
       "light",
       "dark"
     ],
-    "screenshot_manifest_sha256": "5cd140656e377e0882f988650236ab092ac213b4a2ec08e9d78255143a43839a",
+    "screenshot_manifest_sha256": "b4f6c546b7fa8d74c2dfdb762d06a631f46e8eadddd328dacf9ef829dbef2ec8",
     "capture_mode": "full-page",
     "max_page_height": 32768,
     "render_contract": "github-compatible-gfm-v2",

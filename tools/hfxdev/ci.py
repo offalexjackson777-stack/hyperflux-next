@@ -231,6 +231,19 @@ def container_invocation(
             "--output",
             _relative_output(root, output, "CI package artifact output"),
         ]
+    elif operation == "dependency-sync":
+        if (
+            output is not None
+            or lane is not None
+            or revision is not None
+            or openrgb_qualification is not None
+        ):
+            raise ModelError(
+                "CI dependency sync accepts no lane, output, or changed revision"
+            )
+        network = "none"
+        qualification = None
+        hfx_command = ["./hfx", "dependencies", "sync"]
     elif operation == "docs-prepare":
         if (
             output is not None
