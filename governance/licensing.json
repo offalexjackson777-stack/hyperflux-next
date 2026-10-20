@@ -7,6 +7,7 @@
     {"path": "driver/kernel/uapi/**", "expression": "GPL-2.0 WITH Linux-syscall-note", "reason": "Userspace ABI exception."},
     {"path": "integrations/openrgb/icons/hyperflux-*", "expression": "GPL-2.0-only", "reason": "Project-owned HyperFlux marks."},
     {"path": "integrations/openrgb/icons/*.svg", "expression": "ISC", "reason": "Vendored Lucide icons."},
+    {"path": "packaging/licenses/LICENSE-rust-crates", "expression": "MIT", "reason": "Notices of the Rust crates compiled into the programs."},
     {"path": "sdk/cpp/vendor/**", "expression": "MIT", "reason": "Vendored nlohmann JSON dependency."},
     {"path": "sdk/python/**", "expression": "GPL-2.0-or-later", "reason": "Cross-application Python SDK boundary."},
     {"path": "tests/openrazer_public_api.py", "expression": "GPL-2.0-or-later", "reason": "Stock OpenRazer public API compatibility probe."},

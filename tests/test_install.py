@@ -193,6 +193,8 @@ class InstallManifestTests(unittest.TestCase):
                 "full-component-descriptor",
                 "openrgb-license",
                 "lucide-license",
+                "full-rust-crates-license",
+                "nlohmann-json-license",
             },
         )
         self.assertEqual(
@@ -207,6 +209,8 @@ class InstallManifestTests(unittest.TestCase):
                 "/usr/share/hyperflux-next/components/full.json",
                 "/usr/share/licenses/hyperflux-next-full/LICENSE",
                 "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-rust-crates",
+                "/usr/share/licenses/hyperflux-next-full/LICENSE-nlohmann-json",
             },
         )
         self.assertNotIn(

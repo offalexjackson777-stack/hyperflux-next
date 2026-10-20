@@ -17,6 +17,7 @@ the repository. A few paths use a different license, listed below.
 | `driver/kernel/uapi/**` | `GPL-2.0 WITH Linux-syscall-note` | Userspace ABI exception. |
 | `integrations/openrgb/icons/hyperflux-*` | `GPL-2.0-only` | Project-owned HyperFlux marks. |
 | `integrations/openrgb/icons/*.svg` | `ISC` | Vendored Lucide icons. |
+| `packaging/licenses/LICENSE-rust-crates` | `MIT` | Notices of the Rust crates compiled into the programs. |
 | `sdk/cpp/vendor/**` | `MIT` | Vendored nlohmann JSON dependency. |
 | `sdk/python/**` | `GPL-2.0-or-later` | Cross-application Python SDK boundary. |
 | `tests/openrazer_public_api.py` | `GPL-2.0-or-later` | Stock OpenRazer public API compatibility probe. |

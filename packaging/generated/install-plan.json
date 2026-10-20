@@ -1,6 +1,6 @@
 {
   "schema": "hyperflux-compiled-install-plan-v2",
-  "install_manifest_sha256": "048975153bfb2234437e506b154ea255197f76517a8a0031ee7e23988676b8ae",
+  "install_manifest_sha256": "6fcbaa3d799944dd8308c9114d40e5ee23695bd40fb87a9a5ff53fc8e9860251",
   "product": {
     "name": "hyperflux-next-linux",
     "version": "2.2.0",
@@ -376,6 +376,14 @@
       "preserve": false
     },
     {
+      "component": "core-rust-crates-license",
+      "distribution_component": "linux",
+      "source": "packaging/licenses/LICENSE-rust-crates",
+      "destination": "/usr/share/licenses/hyperflux-next-linux/LICENSE-rust-crates",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
       "component": "openrgb-license",
       "distribution_component": "full",
       "source": "LICENSE",
@@ -388,6 +396,22 @@
       "distribution_component": "full",
       "source": "integrations/openrgb/icons/LICENSE-lucide",
       "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-lucide",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "full-rust-crates-license",
+      "distribution_component": "full",
+      "source": "packaging/licenses/LICENSE-rust-crates",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-rust-crates",
+      "mode": "0644",
+      "preserve": false
+    },
+    {
+      "component": "nlohmann-json-license",
+      "distribution_component": "full",
+      "source": "sdk/cpp/vendor/LICENSE.MIT",
+      "destination": "/usr/share/licenses/hyperflux-next-full/LICENSE-nlohmann-json",
       "mode": "0644",
       "preserve": false
     }

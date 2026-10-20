@@ -213,6 +213,23 @@ class DebianPlanTests(unittest.TestCase):
             if "ISC" not in plan.licenses:
                 self.assertNotIn("Lucide", copyright_text(plan))
 
+    def test_copyright_scopes_the_bundled_mit_code_to_its_packages(self) -> None:
+        for plan in self.plans:
+            text = copyright_text(plan)
+            paragraphs = text.split("\n\n")
+            with self.subTest(output=plan.output):
+                self.assertNotIn("Expat", paragraphs[1])
+                crates = "Files: .cargo/registry/src/*\n" in text
+                nlohmann = "Files: sdk/cpp/vendor/include/*\n" in text
+                self.assertEqual(crates, plan.output in {"core", "full"})
+                self.assertEqual(nlohmann, plan.output == "full")
+                self.assertEqual("MIT" in plan.licenses, crates)
+                if crates:
+                    self.assertIn("\nLicense: Expat\nComment: Rust crates from crates.io", text)
+                    self.assertIn("\nLicense: Expat\n Permission is hereby granted", text)
+                if nlohmann:
+                    self.assertIn("Copyright: 2013-2023 Niels Lohmann\nLicense: Expat\n", text)
+
     def test_relations_translate_or_fail_closed(self) -> None:
         self.assertEqual(debian_relation("foo", "x"), "foo")
         self.assertEqual(debian_relation("foo=1.0-1", "x"), "foo (= 1.0-1)")
