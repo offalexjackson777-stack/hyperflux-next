@@ -1,0 +1,38 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stonking
+Components: main
+Date: Tue, 20 Oct 2026 10:34:19 +0000
+Description: HyperFlux Next packages for Ubuntu 26.10
+Label: HyperFlux Next
+Origin: HyperFlux Next
+Suite: stonking
+MD5Sum:
+ 1ba23a3e48bfa69000f5270dbc9e61c4             4105 main/binary-amd64/Packages
+ 67aa1f8126903b9fcaedf4750a85a20e             1558 main/binary-amd64/Packages.gz
+SHA1:
+ cf3b1b0deda954cdf71b49f07a1dc018dfec299a             4105 main/binary-amd64/Packages
+ 38842f2f89cd7af20ce80d39aa8610a1dfe86493             1558 main/binary-amd64/Packages.gz
+SHA256:
+ cd410d9af8bb8d0e2a9c268f9f123b7b45b3ce12528dad2f18ca7f78ad705fe6             4105 main/binary-amd64/Packages
+ 1a12db8cddfe1791afb10ab0eaa93ca058157f2ebe135e1e570b27df45ac1ed0             1558 main/binary-amd64/Packages.gz
+SHA512:
+ 8f06e4166f259d5d54ca1ae6d4e17288229a2d533fece028e0f3715e597856e25cc04350db43d7820b51e8c7762f21eaf438178b985b66d4e894dd34ac424c47             4105 main/binary-amd64/Packages
+ 345cbbebc07dfb4f628bd7188077ab4ea8a7111daf8eb08ed3081e92eebcd1675fbbb3e4d3a3e414c7ba2565dd3c5b0ad3143e8c59eb60c8535dfc0e2a3dcb68             1558 main/binary-amd64/Packages.gz
+
+-----BEGIN PGP SIGNATURE-----
+
+iQGzBAEBCgAdFiEETGTOTIVbxoRLTBZwxn3ZxCJT7ScFAmrXSdUACgkQxn3ZxCJT
+7ScBwQv/fVzojxD2FNcm4G3ymS5IzdiCkbGGan7z4D3evG+7rLPT+xCXCSMGaSYb
+icSYABw8IUjVB7fs2uIO48Q/PsgkUaphzH51yOZYOh86CJqigRFv9dQJ3QwLrxBF
+kHK5+RwUJH11YPYP4iw4gGNz0dnGyzuoSBAOorVRxo/UCkHcRKt5dtZ6GQXbTEs1
+NgTGcAXcE1aUHEvZVFc0FAlGl3MD2e3R1nRurf+L9l3ChjFwCioiLj6UpuYY9Kn5
+7q4v3J5Cwjeh012x9LrusaJIsdjHLGySBevbq/9zUyico1FJ7cSR0EI+3LigYJRp
+fP9rrKY3J/XAMBPzoBRHyr0kzGkjsIC4LBI+KqAciKKix2YKHOFZnSL0foJm/EVG
+4muTDn35TGA3ZX8urSKwphzWcf9eZuoG35m2iuvnrVtCCteiqupnh39IECDLIgO1
+MzGsl/QGm915S1nrg+NzqQOOpxq1jn1eXQ6SbqHUsmnt7CZTv6XXskxN+iCrtkUB
+DtLkcY56
+=IWxl
+-----END PGP SIGNATURE-----

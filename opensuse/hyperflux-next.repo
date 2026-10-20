@@ -1,0 +1,9 @@
+[hyperflux-next]
+name=HyperFlux Next for openSUSE
+baseurl=https://offalexjackson777-stack.github.io/hyperflux-next/opensuse/tumbleweed/$basearch/
+type=rpm-md
+enabled=1
+autorefresh=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://offalexjackson777-stack.github.io/hyperflux-next/hyperflux-next-repository-key.asc

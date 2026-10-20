@@ -1,0 +1,81 @@
+Package: hyperflux-next-dkms
+Architecture: all
+Version: 2.2.0-1
+Priority: optional
+Section: kernel
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 146
+Depends: dkms
+Conflicts: hyperflux-v2-linux-dkms
+Filename: pool/main/h/hyperflux-next/hyperflux-next-dkms_2.2.0-1_all.deb
+Size: 23532
+MD5sum: 47b57067406685ac924743803aed972c
+SHA1: c1f0623637d79537ddb8584ee288bcaae2bfcd57
+SHA256: 75abb6d4477acba7f847e1ded0349be971f35477627a2cb0866602b3830e8718
+SHA512: 770252d5231422a247b3ecfd51a5a98b9adb90d629e156892b773530d23da74ea3f9cc30efa7e3d69c04baf0f3a90059e280578ca57ad9b97889edb78bb1a547
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: HyperFlux receiver kernel driver sources for DKMS
+ Part of the HyperFlux Next Core edition for Debian 14.
+ It is installed as a dependency of hyperflux-next-linux.
+
+Package: hyperflux-next-full
+Architecture: amd64
+Version: 2.2.0-1
+Priority: optional
+Section: admin
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 7634
+Depends: libc6 (>= 2.43), libgcc-s1, systemd, udev, libqt5core5t64, libqt5gui5t64, libqt5widgets5t64, libhidapi-hidraw0, libstdc++6, hyperflux-next-linux (= 2.2.0-1), hyperflux-next-openrazer-driver-dkms (= 2.2.0-1)
+Suggests: openrgb, openrazer-daemon, python3-openrazer
+Filename: pool/main/h/hyperflux-next/hyperflux-next-full_2.2.0-1_amd64.deb
+Size: 1773132
+MD5sum: 5b0d93f0f59af39bd4717ffa12b24b34
+SHA1: 24aa06a453547888b9173499f56fc41fed3b4f7c
+SHA256: 10ffef5f5d239f864ffbf7dbef9428c1a777bf871db5761c0121e992f30760c8
+SHA512: a0f73b51bec313c28ec051ce6948698b702a89a2327b27f58d63288b34cf16f5e23d5128fb60509f2e0965fcfa825119af38ee83de98b3e28be1d4e26da8823d
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: Core plus the OpenRazer compatibility transport and OpenRGB integration for optional stock applications
+ Part of the HyperFlux Next Full edition for Debian 14.
+ This package installs the whole edition.
+
+Package: hyperflux-next-linux
+Architecture: amd64
+Version: 2.2.0-1
+Priority: optional
+Section: admin
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 18301
+Depends: libc6 (>= 2.43), libgcc-s1, systemd, udev, hyperflux-next-dkms (= 2.2.0-1)
+Filename: pool/main/h/hyperflux-next/hyperflux-next-linux_2.2.0-1_amd64.deb
+Size: 2894380
+MD5sum: 5d03660ddfaf838e9bba9102375b412f
+SHA1: 788970744eded2b4d7ec168f45b43cf5ea7e6e81
+SHA256: 10d3808f2312906167db116a7b7f320d02d9c1961a0175874f84dc60eec9515a
+SHA512: 359e7b4c1a82e319dad4b0dc4ee291d5d14a0e3ff6dfd3600ea7dbeaaf2e9578dd5aaa0b93ac3bd3ce5a008b8a53d00ac19b36fd4959b782b17e57e2988efbcf
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: HyperFlux receiver driver, bridge, SDK, CLI, and base services
+ Part of the HyperFlux Next Core edition for Debian 14.
+ This package installs the whole edition.
+
+Package: hyperflux-next-openrazer-driver-dkms
+Architecture: all
+Version: 2.2.0-1
+Priority: optional
+Section: kernel
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 986
+Provides: openrazer-driver-dkms (= 3.12.4+dfsg-1), openrazer-kernel-modules-dkms, hyperflux-openrazer-driver-abi (= 3.12.4)
+Depends: dkms, udev, systemd, hyperflux-next-dkms (= 2.2.0-1)
+Conflicts: openrazer-driver-dkms, openrazer-kernel-modules-dkms
+Replaces: openrazer-driver-dkms, openrazer-kernel-modules-dkms
+Filename: pool/main/h/hyperflux-next/hyperflux-next-openrazer-driver-dkms_2.2.0-1_all.deb
+Size: 71684
+MD5sum: a7c0ee2ee583803326dd95082efc9519
+SHA1: 04e7dd41bd79de1f9a167b54897f2db9ed4ba64d
+SHA256: 4ed01b50f0ea0807e151c3b5ec70576ff87f2e0b06922d06a629a297dec90e42
+SHA512: e77a051346c2cec33dd1c96dfc4897885ca1f55a6189d3047dd1c881e9a415d7c3f4c39a1bb5f990486b1ab776d17cebc0fc8a266a8cc062c788b6565560f5c8
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: OpenRazer kernel driver sources with the HyperFlux native transport, for DKMS
+ Part of the HyperFlux Next Full edition for Debian 14.
+ It is installed as a dependency of hyperflux-next-full.
+

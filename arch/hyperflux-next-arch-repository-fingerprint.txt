@@ -1,0 +1,6 @@
+HyperFlux Next Arch Repository package-signing key
+Primary fingerprint: 8BF8 A266 E756 BD1C 24C9 3091 8B3F 3850 0071 59E8
+Signing subkey fingerprint: 4C64CE4C855BC6844B4C1670C67DD9C42253ED27
+Expires: 2029-08-03T14:35:56Z
+Repository: https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository
+This is a project-operated third-party repository, not an official Arch Linux repository.

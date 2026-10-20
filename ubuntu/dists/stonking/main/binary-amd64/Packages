@@ -1,0 +1,82 @@
+Package: hyperflux-next-dkms
+Architecture: all
+Version: 2.2.0-1
+Priority: optional
+Section: kernel
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 146
+Depends: dkms
+Conflicts: hyperflux-v2-linux-dkms
+Filename: pool/main/h/hyperflux-next/hyperflux-next-dkms_2.2.0-1_all.deb
+Size: 23536
+MD5sum: debd41190cc66968a0da347b4a67e655
+SHA1: 215b767ecf6a3f49ec89a2677c4ff05c5f4fbb77
+SHA256: f64ddd05af2596c6907d1302b81c3535b560368bc53dd4b55cbd7e972c0894f3
+SHA512: 0bffdc97ffcd087f6bd21cdb64f888180b7f706b76597c5564595f45b86c97b3ba0921956ada54d3bba4070c6ecd7cebe48b5c752ba1dd23facd9e4aab919757
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: HyperFlux receiver kernel driver sources for DKMS
+ Part of the HyperFlux Next Core edition for Ubuntu 26.10.
+ It is installed as a dependency of hyperflux-next-linux.
+
+Package: hyperflux-next-full
+Architecture: amd64
+Version: 2.2.0-1
+Priority: optional
+Section: admin
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 5125
+Depends: libc6 (>= 2.34), libgcc-s1, systemd, udev, hyperflux-next-linux (= 2.2.0-1), hyperflux-next-openrazer-driver-dkms (= 2.2.0-1)
+Suggests: openrazer-daemon, python3-openrazer
+Filename: pool/main/h/hyperflux-next/hyperflux-next-full_2.2.0-1_amd64.deb
+Size: 1099492
+MD5sum: ee2ef77861005c963342f7e959a9dd8e
+SHA1: 17686ecd1f7534109027bfdc5b075bab52551704
+SHA256: b604c2d21167651f5314e5253e5da7bf14dba9781119038797548a733bcf64dc
+SHA512: b22e79aa9cbf4a3f9ce46929926dbf04ab5a0aaa3540df56e4e922f2e5cbd926bb09b7aac41d49673ad99a1eeff4abeebdabc9d423c2e9ec5c2298aa87fe1731
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: Core plus the OpenRazer compatibility transport for optional stock applications
+ Part of the HyperFlux Next Full edition for Ubuntu 26.10.
+ This package installs the whole edition.
+ It leaves out the OpenRGB plugin: no OpenRGB in Ubuntu 26.10 can load it.
+
+Package: hyperflux-next-linux
+Architecture: amd64
+Version: 2.2.0-1
+Priority: optional
+Section: admin
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 18301
+Depends: libc6 (>= 2.34), libgcc-s1, systemd, udev, hyperflux-next-dkms (= 2.2.0-1)
+Filename: pool/main/h/hyperflux-next/hyperflux-next-linux_2.2.0-1_amd64.deb
+Size: 2894392
+MD5sum: 4a8b541c1b259a251f7a1bbc80f09cae
+SHA1: 8c501e360f0580ccdd42a8c375d3b08d03816edb
+SHA256: 1e1937629e43ad0bebea91e1ebe6c268780733c27b1da0476ef6f8fed5933c30
+SHA512: ece09aca9cd3ca5f7e6a7c4c83ea3b7f1569b15c03454197850d37f419709a73d80cef9c1f07a2f142d6e763e44091a8c43236bc04e701a614734a25a2ba9263
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: HyperFlux receiver driver, bridge, SDK, CLI, and base services
+ Part of the HyperFlux Next Core edition for Ubuntu 26.10.
+ This package installs the whole edition.
+
+Package: hyperflux-next-openrazer-driver-dkms
+Architecture: all
+Version: 2.2.0-1
+Priority: optional
+Section: kernel
+Maintainer: HyperFlux Next Build System <build@hyperflux.invalid>
+Installed-Size: 986
+Provides: openrazer-driver-dkms (= 3.12.4+dfsg-1), openrazer-driver-dkms (= 3.12.4~ubuntu26.10.1), openrazer-kernel-modules-dkms, hyperflux-openrazer-driver-abi (= 3.12.4)
+Depends: dkms, udev, systemd, hyperflux-next-dkms (= 2.2.0-1)
+Conflicts: openrazer-driver-dkms, openrazer-kernel-modules-dkms
+Replaces: openrazer-driver-dkms, openrazer-kernel-modules-dkms
+Filename: pool/main/h/hyperflux-next/hyperflux-next-openrazer-driver-dkms_2.2.0-1_all.deb
+Size: 71700
+MD5sum: cea9de3c68c30fe74a68f8a941a49ed2
+SHA1: 66360064f76e5eacf2eb7d2401d35a3faf50aeb6
+SHA256: a8d3ac3004eee5a6783ed23b22a94ff04ec1120d69197bef1267a82a3de2e71f
+SHA512: 6beeefddaf13bf78390a552b03ca79b6e0afbcd9cdd9b3e2a5076e0f34b4fb9bb5a73c729cc1d259c3b06e151d32e2289c0633a4b12288d4c3d7eb72b17e7ace
+Homepage: https://github.com/offalexjackson777-stack/hyperflux-next
+Description: OpenRazer kernel driver sources with the HyperFlux native transport, for DKMS
+ Part of the HyperFlux Next Full edition for Ubuntu 26.10.
+ It is installed as a dependency of hyperflux-next-full.
+

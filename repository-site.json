@@ -1,0 +1,123 @@
+{
+  "schema": "hyperflux-repository-site-manifest-v1",
+  "signed": true,
+  "signer": {
+    "primary_fingerprint": "8BF8A266E756BD1C24C930918B3F3850007159E8",
+    "signing_subkey_fingerprint": "4C64CE4C855BC6844B4C1670C67DD9C42253ED27"
+  },
+  "site_url": "https://offalexjackson777-stack.github.io/hyperflux-next",
+  "targets": {
+    "debian": {
+      "architecture": "amd64",
+      "name": "Debian 14",
+      "packages": [
+        {
+          "filename": "hyperflux-next-dkms_2.2.0-1_all.deb",
+          "sha256": "75abb6d4477acba7f847e1ded0349be971f35477627a2cb0866602b3830e8718",
+          "size": 23532
+        },
+        {
+          "filename": "hyperflux-next-full_2.2.0-1_amd64.deb",
+          "sha256": "10ffef5f5d239f864ffbf7dbef9428c1a777bf871db5761c0121e992f30760c8",
+          "size": 1773132
+        },
+        {
+          "filename": "hyperflux-next-linux_2.2.0-1_amd64.deb",
+          "sha256": "10d3808f2312906167db116a7b7f320d02d9c1961a0175874f84dc60eec9515a",
+          "size": 2894380
+        },
+        {
+          "filename": "hyperflux-next-openrazer-driver-dkms_2.2.0-1_all.deb",
+          "sha256": "4ed01b50f0ea0807e151c3b5ec70576ff87f2e0b06922d06a629a297dec90e42",
+          "size": 71684
+        }
+      ],
+      "suite": "forky",
+      "version": "2.2.0-1"
+    },
+    "fedora": {
+      "architecture": "x86_64",
+      "name": "Fedora 44",
+      "packages": [
+        {
+          "filename": "hyperflux-next-dkms-2.2.0-1.noarch.rpm",
+          "sha256": "17e6c3af2d39166b816c8a1d7bb5b5aa856f4c7fcebd2704900cb74b86905514",
+          "size": 31817
+        },
+        {
+          "filename": "hyperflux-next-full-2.2.0-1.x86_64.rpm",
+          "sha256": "7d9afaa36666a838c139119e92640149fd7cd44725eee91b2e5f515636f1a614",
+          "size": 1107097
+        },
+        {
+          "filename": "hyperflux-next-linux-2.2.0-1.x86_64.rpm",
+          "sha256": "fe44de5e6edc122669e01769e51bb353bc3bbdbb839c0e25bd981223bdb535e2",
+          "size": 2900353
+        },
+        {
+          "filename": "hyperflux-next-openrazer-driver-dkms-2.2.0-1.noarch.rpm",
+          "sha256": "ee81dd28b99428cc5d97aea14df5a3d465d5924bfe9d97d0ff5344ca85d08801",
+          "size": 80441
+        }
+      ],
+      "suite": "44",
+      "version": "2.2.0-1"
+    },
+    "opensuse": {
+      "architecture": "x86_64",
+      "name": "openSUSE Tumbleweed",
+      "packages": [
+        {
+          "filename": "hyperflux-next-dkms-2.2.0-1.noarch.rpm",
+          "sha256": "83027c5f6d6ea42a0d709e838a0cdd841828adb750312936361671ed68597662",
+          "size": 31353
+        },
+        {
+          "filename": "hyperflux-next-full-2.2.0-1.x86_64.rpm",
+          "sha256": "977d7596baf30667606e956b5eb6cea0fa3cd27e97fb6a4efff8b81c204697ea",
+          "size": 1106665
+        },
+        {
+          "filename": "hyperflux-next-linux-2.2.0-1.x86_64.rpm",
+          "sha256": "086b503f0314c21d47f656d11446c800821ea268104b4b74b5ec208e607e52e7",
+          "size": 2899901
+        },
+        {
+          "filename": "hyperflux-next-openrazer-driver-dkms-2.2.0-1.noarch.rpm",
+          "sha256": "5ab0e64dae640d66db1f772deedfa5e602cfd85250d1274bc500b2ae6073a32e",
+          "size": 79969
+        }
+      ],
+      "suite": "tumbleweed",
+      "version": "2.2.0-1"
+    },
+    "ubuntu": {
+      "architecture": "amd64",
+      "name": "Ubuntu 26.10",
+      "packages": [
+        {
+          "filename": "hyperflux-next-dkms_2.2.0-1_all.deb",
+          "sha256": "f64ddd05af2596c6907d1302b81c3535b560368bc53dd4b55cbd7e972c0894f3",
+          "size": 23536
+        },
+        {
+          "filename": "hyperflux-next-full_2.2.0-1_amd64.deb",
+          "sha256": "b604c2d21167651f5314e5253e5da7bf14dba9781119038797548a733bcf64dc",
+          "size": 1099492
+        },
+        {
+          "filename": "hyperflux-next-linux_2.2.0-1_amd64.deb",
+          "sha256": "1e1937629e43ad0bebea91e1ebe6c268780733c27b1da0476ef6f8fed5933c30",
+          "size": 2894392
+        },
+        {
+          "filename": "hyperflux-next-openrazer-driver-dkms_2.2.0-1_all.deb",
+          "sha256": "a8d3ac3004eee5a6783ed23b22a94ff04ec1120d69197bef1267a82a3de2e71f",
+          "size": 71700
+        }
+      ],
+      "suite": "stonking",
+      "version": "2.2.0-1"
+    }
+  }
+}

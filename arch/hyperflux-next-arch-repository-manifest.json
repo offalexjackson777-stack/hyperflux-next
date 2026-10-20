@@ -1,0 +1,157 @@
+{
+  "policy": {
+    "$schema": "../schemas/arch-repository.schema.json",
+    "assets": {
+      "checksums": "SHA256SUMS-repository",
+      "database": "hyperflux-next.db",
+      "database_archive": "hyperflux-next.db.tar.zst",
+      "files": "hyperflux-next.files",
+      "files_archive": "hyperflux-next.files.tar.zst",
+      "manifest": "hyperflux-next-arch-repository-manifest.json"
+    },
+    "packages": [
+      {
+        "filename": "hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst",
+        "name": "hyperflux-next-dkms",
+        "sha256": "03a025953c1fee493434b8b5919f2a2b4331bcdbb0a266147fc124af1cbfe6f5",
+        "version": "2.2.0-1"
+      },
+      {
+        "filename": "hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst",
+        "name": "hyperflux-next-linux",
+        "sha256": "2f0f87cdbc60ccfd691a937b0ffc7e1147a1db9cee5735c1a9fcad781df0bab4",
+        "version": "2.2.0-1"
+      },
+      {
+        "filename": "hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst",
+        "name": "hyperflux-next-openrazer-driver-dkms",
+        "sha256": "055a1628ff595549926f16b7062c0ffbe495fb18d30f3ffacb5ddf6d76c4db61",
+        "version": "2.2.0-1"
+      },
+      {
+        "filename": "hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst",
+        "name": "hyperflux-next-full",
+        "sha256": "76ab78fd823531e266e56ffec317256130a3ef4415df3717b56f64c56084d493",
+        "version": "2.2.0-1"
+      }
+    ],
+    "repository": {
+      "architecture": "x86_64",
+      "channel_purpose": "machine-managed-arch-repository",
+      "github_release_prerelease": true,
+      "human_facing_product_release": false,
+      "name": "hyperflux-next",
+      "official_arch_repository": false,
+      "product_release_tag": "v2.2.0",
+      "product_release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/v2.2.0",
+      "release_tag": "arch-repository",
+      "release_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/tag/arch-repository",
+      "server_url": "https://github.com/offalexjackson777-stack/hyperflux-next/releases/download/arch-repository",
+      "signature_level": "Required DatabaseRequired TrustedOnly"
+    },
+    "schema": "hyperflux-arch-repository-v1",
+    "signing": {
+      "expires_at": "2029-08-03T14:35:56Z",
+      "fingerprint_asset": "hyperflux-next-arch-repository-fingerprint.txt",
+      "primary_fingerprint": "8BF8A266E756BD1C24C930918B3F3850007159E8",
+      "public_key_asset": "hyperflux-next-arch-repository-key.asc",
+      "public_key_path": "packaging/keys/hyperflux-next-arch-repository-key.asc",
+      "signature_timestamp": 1792491748,
+      "signing_subkey_fingerprint": "4C64CE4C855BC6844B4C1670C67DD9C42253ED27"
+    }
+  },
+  "policy_sha256": "3c160d36453f7a464f3d5df1bc07bfb9de613a6ae053c44e3a22978dcc75ca2c",
+  "published_assets": [
+    {
+      "name": "hyperflux-next-arch-repository-fingerprint.txt",
+      "sha256": "073198d91cdd6edb5b48e1e4b41c5bd8f6fd10e45698f12a7933410c7ed30e6d",
+      "size": 415
+    },
+    {
+      "name": "hyperflux-next-arch-repository-key.asc",
+      "sha256": "20b65c015b2b32731e11ed44971b38c20793c79d0556ec8b34d12fc85fa13e10",
+      "size": 3074
+    },
+    {
+      "name": "hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst",
+      "sha256": "03a025953c1fee493434b8b5919f2a2b4331bcdbb0a266147fc124af1cbfe6f5",
+      "size": 36903
+    },
+    {
+      "name": "hyperflux-next-dkms-2.2.0-1-x86_64.pkg.tar.zst.sig",
+      "sha256": "52309b6a162e4a384e6ada0af7e721098edd51415ebef5bbf4f104db962cdec0",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst",
+      "sha256": "76ab78fd823531e266e56ffec317256130a3ef4415df3717b56f64c56084d493",
+      "size": 1753579
+    },
+    {
+      "name": "hyperflux-next-full-2.2.0-1-x86_64.pkg.tar.zst.sig",
+      "sha256": "e11c72089b0ecf98cd2fcb0bf5dc8ec34a00930a8ed924a2303f99c421d32d98",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst",
+      "sha256": "2f0f87cdbc60ccfd691a937b0ffc7e1147a1db9cee5735c1a9fcad781df0bab4",
+      "size": 3200524
+    },
+    {
+      "name": "hyperflux-next-linux-2.2.0-1-x86_64.pkg.tar.zst.sig",
+      "sha256": "63e9a6bed456dcf45c682ab446b8e3b1b732700e2f19b17be70e0875fc42404f",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst",
+      "sha256": "055a1628ff595549926f16b7062c0ffbe495fb18d30f3ffacb5ddf6d76c4db61",
+      "size": 84961
+    },
+    {
+      "name": "hyperflux-next-openrazer-driver-dkms-2.2.0-1-x86_64.pkg.tar.zst.sig",
+      "sha256": "869838ffb187d448686bea6e375503343c2629fbfd33a01f2a96568071c803f6",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next.db",
+      "sha256": "c2fb5f51ba92544ddec51aff320bec967f536a6ec1ae88f3c7118668678b07ca",
+      "size": 2918
+    },
+    {
+      "name": "hyperflux-next.db.sig",
+      "sha256": "be668a2da9671428974a655605e78a3e7e13eadde9d6091358911f615d5d378b",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next.db.tar.zst",
+      "sha256": "c2fb5f51ba92544ddec51aff320bec967f536a6ec1ae88f3c7118668678b07ca",
+      "size": 2918
+    },
+    {
+      "name": "hyperflux-next.db.tar.zst.sig",
+      "sha256": "be668a2da9671428974a655605e78a3e7e13eadde9d6091358911f615d5d378b",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next.files",
+      "sha256": "174de7b898200602f59d986146ce6e5d8d34c1bbf66eba0eebb4492a85b455bc",
+      "size": 3664
+    },
+    {
+      "name": "hyperflux-next.files.sig",
+      "sha256": "661db714f3c95ba2a987aba39ba6759418a1aa728a9a3af6f4ddad80ee761085",
+      "size": 438
+    },
+    {
+      "name": "hyperflux-next.files.tar.zst",
+      "sha256": "174de7b898200602f59d986146ce6e5d8d34c1bbf66eba0eebb4492a85b455bc",
+      "size": 3664
+    },
+    {
+      "name": "hyperflux-next.files.tar.zst.sig",
+      "sha256": "661db714f3c95ba2a987aba39ba6759418a1aa728a9a3af6f4ddad80ee761085",
+      "size": 438
+    }
+  ],
+  "schema": "hyperflux-arch-repository-manifest-v2"
+}

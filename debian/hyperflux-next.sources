@@ -1,0 +1,6 @@
+Types: deb
+URIs: https://offalexjackson777-stack.github.io/hyperflux-next/debian
+Suites: forky
+Components: main
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/hyperflux-next.asc
