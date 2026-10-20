@@ -63,8 +63,7 @@ Keep in mind:
 ### Not In The Official Arch Repositories Or The AUR
 
 HyperFlux comes from its own signed package repository, which you add once as
-shown in the [installation guide](installation.md). An AUR package is planned
-but not published yet.
+shown in the [installation guide](installation.md).
 
 ## Applications
 

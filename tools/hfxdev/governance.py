@@ -68,6 +68,8 @@ SERVICE_DECISIONS = {
     "openssf-scorecard": "deferred",
     "renovate": "not-selected",
 }
+DEPENDENCY_UPDATE_BRANCH = "dev"
+DEPENDABOT_SYNC_SECRET = "DEPENDABOT_SYNC_DEPLOY_KEY"
 JOB_SUMMARY_SECTIONS = (
     "source-revision",
     "affected-domains",
