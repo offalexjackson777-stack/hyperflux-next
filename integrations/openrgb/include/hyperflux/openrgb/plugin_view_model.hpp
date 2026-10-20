@@ -17,15 +17,9 @@
 namespace hyperflux::openrgb::native
 {
 
+/// The project's GitHub page: the plugin's URL and where the page's GitHub button goes.
 inline constexpr std::string_view repository_url =
     "https://github.com/offalexjackson777-stack/hyperflux-next";
-/// The troubleshooting guide the core package installs. It matches the
-/// installed version and opens without a network connection.
-inline constexpr std::string_view installed_help_path = "/usr/share/doc/hyperflux-next/troubleshooting.md";
-/// The same guide online, for when it is not installed: a development build,
-/// or an OpenRGB sandbox that cannot see the host's /usr/share/doc.
-inline constexpr std::string_view online_help_url =
-    "https://github.com/offalexjackson777-stack/hyperflux-next/blob/main/docs/user/troubleshooting.md";
 
 enum class PluginHealthTone
 {

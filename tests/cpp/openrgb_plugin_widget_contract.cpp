@@ -11,7 +11,6 @@
 #include <QPushButton>
 #include <QTabBar>
 #include <QTabWidget>
-#include <QTemporaryFile>
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -110,7 +109,7 @@ int renderer_contract()
     // Every icon the page uses is built in and draws something.
     constexpr std::array<std::string_view, 21> names {
         "battery", "battery-full", "battery-low", "battery-medium", "cable", "circle-check",
-        "circle-help", "circle-pause", "clock", "external-link", "hyperflux-mark",
+        "circle-pause", "clock", "external-link", "github", "hyperflux-mark",
         "hyperflux-symbolic", "keyboard", "lightbulb", "moon", "mouse", "plug-zap", "refresh-cw",
         "triangle-alert", "wifi", "wifi-off",
     };
@@ -188,31 +187,24 @@ int main(int argc, char** argv)
         return failure(__LINE__);
     }
 
-    // Help opens the installed guide when there is one and the online guide otherwise.
-    const QString online = QString::fromUtf8(online_help_url.data(), static_cast<int>(online_help_url.size()));
-    QTemporaryFile installed_guide;
-    if(!installed_guide.open() || help_target(installed_guide.fileName()) != QUrl::fromLocalFile(installed_guide.fileName())
-       || help_target(installed_guide.fileName() + ".missing") != QUrl(online)
-       || !online.startsWith("https://github.com/offalexjackson777-stack/hyperflux-next/")
-       || !online.endsWith("/docs/user/troubleshooting.md"))
+    // The GitHub button opens the project page, the same address OpenRGB lists for the plugin.
+    const QString github_url = QString::fromUtf8(repository_url.data(), static_cast<int>(repository_url.size()));
+    if(github_url != "https://github.com/offalexjackson777-stack/hyperflux-next")
     {
         return failure(__LINE__);
     }
-    const QUrl help_url = help_target(
-        QString::fromUtf8(installed_help_path.data(), static_cast<int>(installed_help_path.size())));
-    const QString help_tooltip = help_url.isLocalFile() ? help_url.toLocalFile() : help_url.toString();
 
     auto* health = widget->findChild<QFrame*>("hyperfluxHealth");
     auto* cards = widget->findChild<QWidget*>("hyperfluxDeviceCards");
-    auto* help = widget->findChild<QPushButton*>("hyperfluxHelp");
+    auto* github = widget->findChild<QPushButton*>("hyperfluxGitHub");
     const auto card_frames = widget->findChildren<QFrame*>("hyperfluxDeviceCard");
     const auto timers = widget->findChildren<QTimer*>();
     if(health == nullptr || health->property("word").toString() != "Ready" || cards == nullptr
        || card_frames.size() != 2 || widget->findChild<QFrame*>("hyperfluxAttention") != nullptr
        || widget->findChild<QLabel*>("hyperfluxEmptyState") != nullptr
        || widget->findChild<QWidget*>("hyperfluxLighting") == nullptr
-       || help == nullptr || help->accessibleName() != "Help"
-       || help->toolTip() != help_tooltip || timers.size() != 1
+       || github == nullptr || github->accessibleName() != "GitHub"
+       || github->toolTip() != github_url || timers.size() != 1
        || timers.front()->interval() != PluginInformationWidget::refresh_interval_ms
        || !timers.front()->isActive())
     {

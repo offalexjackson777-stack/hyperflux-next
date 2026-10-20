@@ -71,7 +71,7 @@ configure_file(
 set(
     HFX_OPENRGB_ICONS
     battery battery-full battery-low battery-medium cable circle-check
-    circle-help circle-pause clock external-link hyperflux-mark
+    circle-pause clock external-link github hyperflux-mark
     hyperflux-symbolic keyboard lightbulb moon mouse plug-zap refresh-cw
     triangle-alert wifi wifi-off
 )

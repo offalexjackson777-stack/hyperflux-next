@@ -7,7 +7,6 @@
 #include <QApplication>
 #include <QDesktopServices>
 #include <QEvent>
-#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QGridLayout>
@@ -290,43 +289,37 @@ QString from(std::string_view value)
     return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
 }
 
-QPushButton* help_button(const Colours& colours)
+QPushButton* github_button(const Colours& colours)
 {
     auto* button = new QPushButton();
-    button->setObjectName("hyperfluxHelp");
-    button->setAccessibleName("Help");
+    button->setObjectName("hyperfluxGitHub");
+    button->setAccessibleName("GitHub");
     auto* layout = row_layout(medium_gap);
     layout->setContentsMargins(large_gap + 2, small_gap, large_gap + 2, small_gap);
     button->setLayout(layout);
-    layout->addWidget(new Icon("circle-help", 16, colours.ink), 0, Qt::AlignVCenter);
-    auto* word = text("Help", colours);
+    layout->addWidget(new Icon("github", 16, colours.ink), 0, Qt::AlignVCenter);
+    auto* word = text("GitHub", colours);
     word->setAttribute(Qt::WA_TransparentForMouseEvents);
     layout->addWidget(word, 0, Qt::AlignVCenter);
-    // The trailing arrow says the guide opens outside OpenRGB.
+    // The trailing arrow says the page opens in the browser, outside OpenRGB.
     layout->addWidget(new Icon("external-link", 16, colours.muted), 0, Qt::AlignVCenter);
     const QSize size = layout->sizeHint().expandedTo(QSize(0, 30));
     button->setFixedSize(size);
     // Its own sheet with a pinned size: a skin's "QPushButton { min-width }" cannot resize or restyle it.
     button->setStyleSheet(
-        QString("QPushButton#hyperfluxHelp { background: %1; border: 1px solid %2; border-radius: %3px; padding: 0;"
+        QString("QPushButton#hyperfluxGitHub { background: %1; border: 1px solid %2; border-radius: %3px; padding: 0;"
                 " min-width: %4px; max-width: %4px; min-height: %5px; max-height: %5px; }"
-                "QPushButton#hyperfluxHelp:hover { background: %6; }"
-                "QPushButton#hyperfluxHelp:pressed { background: %2; }")
+                "QPushButton#hyperfluxGitHub:hover { background: %6; }"
+                "QPushButton#hyperfluxGitHub:pressed { background: %2; }")
             .arg(css(mix(colours.card, colours.ink, 0.06)), css(mix(colours.card, colours.ink, 0.18)))
             .arg(radius)
             .arg(size.width() - 2)
             .arg(size.height() - 2)
             .arg(css(mix(colours.card, colours.ink, 0.11))));
     button->setCursor(Qt::PointingHandCursor);
-    const QUrl target = help_target(from(installed_help_path));
-    button->setToolTip(target.isLocalFile() ? target.toLocalFile() : target.toString());
-    QObject::connect(button, &QPushButton::clicked, button, [target] {
-        // A desktop with no handler for Markdown files still gets the guide, from the web.
-        if(!QDesktopServices::openUrl(target) && target.isLocalFile())
-        {
-            QDesktopServices::openUrl(QUrl(from(online_help_url)));
-        }
-    });
+    const QUrl target(from(repository_url));
+    button->setToolTip(target.toString());
+    QObject::connect(button, &QPushButton::clicked, button, [target] { QDesktopServices::openUrl(target); });
     return button;
 }
 
@@ -484,7 +477,7 @@ QWidget* build_page(const PluginInformationViewModel& model, const Colours& colo
     page->setContentsMargins(grid_unit, grid_unit, grid_unit, grid_unit);
     page->setSpacing(grid_unit);
 
-    // Header: the mark and name identify the page, one chip gives the overall state, one button gets help.
+    // Header: the mark and name identify the page, one chip gives the overall state, one button opens GitHub.
     auto* head = row_layout(large_gap + 4);
     if(colours.dark)
     {
@@ -519,7 +512,7 @@ QWidget* build_page(const PluginInformationViewModel& model, const Colours& colo
     }
     head->addWidget(state, 0, Qt::AlignVCenter);
     head->addStretch(1);
-    head->addWidget(help_button(colours), 0, Qt::AlignVCenter);
+    head->addWidget(github_button(colours), 0, Qt::AlignVCenter);
     page->addLayout(head);
 
     // One place says the readings are old, instead of a label on every card.
@@ -571,15 +564,6 @@ QWidget* build_page(const PluginInformationViewModel& model, const Colours& colo
 }
 
 } // namespace
-
-QUrl help_target(const QString& installed_path)
-{
-    if(QFileInfo(installed_path).isReadable())
-    {
-        return QUrl::fromLocalFile(installed_path);
-    }
-    return QUrl(from(online_help_url));
-}
 
 PluginInformationWidget::PluginInformationWidget(
     ModelProvider provider,

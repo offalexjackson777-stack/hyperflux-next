@@ -40,7 +40,7 @@ the list on the left. The page shows one card per paired device with its
 battery level, whether it is charging, and whether it is connected wirelessly
 or by cable. If a battery level has not been updated for a while, its card
 says how long ago it was. If HyperFlux cannot reach your devices, the page
-tells you what to run. The **Help** button opens the troubleshooting guide.
+tells you what to run. The **GitHub** button opens the project's GitHub page.
 
 ## See Battery Level On Your Desktop
 

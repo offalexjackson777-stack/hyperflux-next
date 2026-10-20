@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/0f889c7aae3009050eead9f4fac4f19d2b031923d8ae654fb6d2565646979c05",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/3bc550c44010b9b1f2a3ec94cdd02785880df5671d024ae1c6ff392601d76aec",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1252,23 +1252,6 @@
       "comment": "Vendored source at integrations/openrgb/icons/circle-check.svg."
     },
     {
-      "SPDXID": "SPDXRef-Vendored-lucide-circle-help-0.460.0",
-      "name": "lucide-circle-help",
-      "versionInfo": "0.460.0",
-      "downloadLocation": "https://github.com/lucide-icons/lucide.git",
-      "filesAnalyzed": false,
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "ISC",
-      "copyrightText": "NOASSERTION",
-      "checksums": [
-        {
-          "algorithm": "SHA256",
-          "checksumValue": "975db087da041530dbf59ba1e61a7b99c3519fad43dae6375e42ccc74ba63924"
-        }
-      ],
-      "comment": "Vendored source at integrations/openrgb/icons/circle-help.svg."
-    },
-    {
       "SPDXID": "SPDXRef-Vendored-lucide-circle-pause-0.460.0",
       "name": "lucide-circle-pause",
       "versionInfo": "0.460.0",
@@ -1318,6 +1301,23 @@
         }
       ],
       "comment": "Vendored source at integrations/openrgb/icons/external-link.svg."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendored-lucide-github-0.460.0",
+      "name": "lucide-github",
+      "versionInfo": "0.460.0",
+      "downloadLocation": "https://github.com/lucide-icons/lucide.git",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "793554449a3078923edeeff585ecc04c44b0d8de17f7e6b5b0e74399f0fd744b"
+        }
+      ],
+      "comment": "Vendored source at integrations/openrgb/icons/github.svg."
     },
     {
       "SPDXID": "SPDXRef-Vendored-lucide-keyboard-0.460.0",
@@ -2384,11 +2384,6 @@
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.2.0",
       "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-Vendored-lucide-circle-help-0.460.0"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-hyperflux-next-2.2.0",
-      "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-Vendored-lucide-circle-pause-0.460.0"
     },
     {
@@ -2400,6 +2395,11 @@
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.2.0",
       "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-Vendored-lucide-external-link-0.460.0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-hyperflux-next-2.2.0",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Vendored-lucide-github-0.460.0"
     },
     {
       "spdxElementId": "SPDXRef-Package-hyperflux-next-2.2.0",

@@ -62,16 +62,6 @@
       "sha256": "3e519680ab8e2a8ad8f56a340c10d61957d872237aaa868cf324b0900a74f384"
     },
     {
-      "id": "lucide-circle-help",
-      "version": "0.460.0",
-      "license_expression": "ISC",
-      "source_repository": "https://github.com/lucide-icons/lucide.git",
-      "source_via_repository": "https://github.com/lucide-icons/lucide.git",
-      "source_via_commit": "4d91fbb588f2864941dcfb12288a8b6291afa503",
-      "path": "integrations/openrgb/icons/circle-help.svg",
-      "sha256": "975db087da041530dbf59ba1e61a7b99c3519fad43dae6375e42ccc74ba63924"
-    },
-    {
       "id": "lucide-circle-pause",
       "version": "0.460.0",
       "license_expression": "ISC",
@@ -100,6 +90,16 @@
       "source_via_commit": "4d91fbb588f2864941dcfb12288a8b6291afa503",
       "path": "integrations/openrgb/icons/external-link.svg",
       "sha256": "3891241b8c3bfc3a8a930078f26ffc5a7e9763da6d0162ace2050b28d4c1d1fe"
+    },
+    {
+      "id": "lucide-github",
+      "version": "0.460.0",
+      "license_expression": "ISC",
+      "source_repository": "https://github.com/lucide-icons/lucide.git",
+      "source_via_repository": "https://github.com/lucide-icons/lucide.git",
+      "source_via_commit": "4d91fbb588f2864941dcfb12288a8b6291afa503",
+      "path": "integrations/openrgb/icons/github.svg",
+      "sha256": "793554449a3078923edeeff585ecc04c44b0d8de17f7e6b5b0e74399f0fd744b"
     },
     {
       "id": "lucide-keyboard",
