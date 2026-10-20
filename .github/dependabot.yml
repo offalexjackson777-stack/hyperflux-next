@@ -3,6 +3,7 @@ version: 2
 updates:
 - package-ecosystem: github-actions
   directory: /
+  target-branch: dev
   schedule:
     interval: weekly
     day: monday
@@ -15,6 +16,7 @@ updates:
   - 'area: security'
 - package-ecosystem: cargo
   directory: /
+  target-branch: dev
   schedule:
     interval: weekly
     day: monday
@@ -27,6 +29,7 @@ updates:
   - 'area: security'
 - package-ecosystem: pip
   directory: /sdk/python
+  target-branch: dev
   schedule:
     interval: weekly
     day: monday

@@ -146,6 +146,17 @@ def _parser() -> argparse.ArgumentParser:
         help="a screenshot you have looked at; repeat for each one",
     )
 
+    dependencies = commands.add_parser(
+        "dependencies", help="carry dependency updates into the repository authorities"
+    )
+    dependencies_commands = dependencies.add_subparsers(
+        dest="dependencies_command", required=True
+    )
+    dependencies_commands.add_parser(
+        "sync",
+        help="copy a Dependabot update into the authorities and regenerate derived files",
+    )
+
     generate = commands.add_parser("generate", help="regenerate canonical derived files")
     generate.add_argument("--check", action="store_true", help="reserved for compatibility; verify performs the check")
 
@@ -332,6 +343,11 @@ def _parser() -> argparse.ArgumentParser:
     ci_verify.add_argument("--changed-from")
     ci_verify.add_argument("--openrgb-qualification", type=Path)
     ci_verify.add_argument("--release-evidence", choices=RELEASE_EVIDENCE_MODES)
+    ci_dependency_sync = ci_commands.add_parser(
+        "dependency-sync",
+        help="carry a Dependabot update into the authorities offline in the pinned container",
+    )
+    ci_dependency_sync.add_argument("--image", required=True)
     ci_docs_prepare = ci_commands.add_parser(
         "docs-prepare",
         help="install the locked documentation renderer packages with bounded network access",
@@ -894,6 +910,20 @@ def main(arguments: list[str] | None = None) -> int:
             return 0 if outcome.status == "passed" else 1
         if args.command == "docs":
             return _docs(root, args)
+        if args.command == "dependencies":
+            from .dependency_sync import sync_dependency_update
+            from .render import write_generated
+
+            changes = sync_dependency_update(root)
+            write_generated(root)
+            for change in changes:
+                print(f"{change.path}: {change.name} {change.old} -> {change.new}")
+            print(
+                "Dependency authorities and generated views are current."
+                if changes
+                else "No dependency update to carry; generated views are current."
+            )
+            return 0
         if args.command == "generate":
             from .render import write_generated
 
@@ -1146,6 +1176,10 @@ def main(arguments: list[str] | None = None) -> int:
             if args.ci_command == "prepare":
                 invocation = container_invocation(
                     root, image=args.image, operation="prepare"
+                )
+            elif args.ci_command == "dependency-sync":
+                invocation = container_invocation(
+                    root, image=args.image, operation="dependency-sync"
                 )
             elif args.ci_command == "openrgb-prepare":
                 if os.environ.get(PINNED_VERIFICATION_ENVIRONMENT) != "1":

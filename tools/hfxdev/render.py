@@ -26,6 +26,7 @@ from .generators.governance import (
     codeowners as github_codeowners,
     codeql_workflow as github_codeql_workflow,
     dependency_review_workflow as github_dependency_review_workflow,
+    dependabot_sync_workflow as github_dependabot_sync_workflow,
     dependabot as github_dependabot,
     device_support as github_device_support,
     distribution_package_workflow as github_distribution_package_workflow,
@@ -453,6 +454,9 @@ def rendered_files(root: Path) -> dict[Path, str]:
             github_governance
         ),
         root / ".github" / "workflows" / "dependency-review.yml": github_dependency_review_workflow(
+            github_governance
+        ),
+        root / ".github" / "workflows" / "dependabot-sync.yml": github_dependabot_sync_workflow(
             github_governance
         ),
         root / "governance" / "generated" / "github-protection-plan.json": github_protection_plan(

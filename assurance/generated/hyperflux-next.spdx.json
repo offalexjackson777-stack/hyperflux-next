@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "HyperFlux Next source dependency inventory",
-  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/3bc550c44010b9b1f2a3ec94cdd02785880df5671d024ae1c6ff392601d76aec",
+  "documentNamespace": "https://hyperflux.dev/spdx/hyperflux-next/945f5423e8dd331997ac91fd7a0c14a1653af915e8923b6d0bcf0cc753683143",
   "creationInfo": {
     "created": "2026-07-20T00:00:00Z",
     "creators": [
@@ -1066,15 +1066,15 @@
       "comment": "Immutable GitHub Actions pin reviewed as v4.4.1."
     },
     {
-      "SPDXID": "SPDXRef-GitHubAction-github-codeql-action-24c54180a607b1449ed407dd24f251e4e9147c8d",
+      "SPDXID": "SPDXRef-GitHubAction-github-codeql-action-6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee",
       "name": "github/codeql-action",
-      "versionInfo": "24c54180a607b1449ed407dd24f251e4e9147c8d",
+      "versionInfo": "6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee",
       "downloadLocation": "https://github.com/github/codeql-action",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
-      "comment": "Immutable GitHub Actions pin reviewed as v4.38.3."
+      "comment": "Immutable GitHub Actions pin reviewed as v4.39.0."
     },
     {
       "SPDXID": "SPDXRef-Package-hyperflux-next-2.2.0",
@@ -2262,7 +2262,7 @@
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-2.2.0"
     },
     {
-      "spdxElementId": "SPDXRef-GitHubAction-github-codeql-action-24c54180a607b1449ed407dd24f251e4e9147c8d",
+      "spdxElementId": "SPDXRef-GitHubAction-github-codeql-action-6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee",
       "relationshipType": "BUILD_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-hyperflux-next-2.2.0"
     },
